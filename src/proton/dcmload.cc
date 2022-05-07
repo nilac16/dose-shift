@@ -55,6 +55,9 @@ int rtdose_get_px_spacing(const RTDose *dcm, double spacing[])
         return 1;
     }
     spacing[1] = static_cast<double>(x);
+    /* This may be wrong. I think the correct information is in the grid
+    frame offset vector (3004, 000c). For now, all of our dicoms have
+    uniform grid frame offsets */
     stat = dcm->dcm.getSliceThickness(x);
     if (stat.bad()) {
         return 1;

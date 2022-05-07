@@ -18,13 +18,16 @@ class MainApplication : public wxApp {
     void initialize_main_window();
 
     void on_dicom_load(wxFileDirPickerEvent &e);
-    void on_depth_change(wxCommandEvent &e);
+    void on_plot_change(wxCommandEvent &e);
 
 public:
     float get_depth() const;
 
     bool detector_enabled() const;
     void get_detector_affine(double affine[]) const noexcept;
+
+    void get_line_dose(double *x, double *y) const noexcept;
+    void set_line_dose(double x, double y);
 
     void set_translation(double x, double y);
 

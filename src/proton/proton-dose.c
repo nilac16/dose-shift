@@ -203,11 +203,9 @@ static void proton_dose_fcast(float dst[_q(static 2)], const long src[_q(static 
 static float proton_dose_interp_eval(const float interp[_q(static 4)],
                                      const float x[_q(static 2)])
 {
-    return fmaf(
-        x[1],
+    return fmaf(x[1],
         fmaf(x[0], interp[3], interp[2]),
-        fmaf(x[0], interp[1], interp[0])
-    );
+        fmaf(x[0], interp[1], interp[0]));
 }
 
 /** REWRITEME: Add more function calls, this context's alphabet is a little 

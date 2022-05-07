@@ -11,7 +11,11 @@
 #define DEPTH_LABEL     wxT("Slice depth (mm)")
 #define DEPTH_INIT_MAX  300
 
-#define DETECTOR_LABEL  wxT("Window control")
+#define PLOT_LABEL      wxT("Line dose")
+#define PLOT_XLABEL     wxT("x (mm)")
+#define PLOT_YLABEL     wxT("y (mm)")
+#define PLOT_ZERO       wxT("0.00")
+
 #define DETECTOR_SHOW   wxT("Show detector window")
 #define DETECTOR_RESET  wxT("Reset")
 

@@ -5,6 +5,7 @@
 
 void DoseWindow::paint_detector(wxPaintDC &dc)
 {
+    constexpr double xhair = 5.0;
     constexpr double oct = 260.0;
     const double conv[2] = {
         static_cast<double>(proton_image_dimension(img, 0)) / proton_dose_width(dose, 0),
@@ -18,7 +19,8 @@ void DoseWindow::paint_detector(wxPaintDC &dc)
     gc->ConcatTransform(gc->CreateMatrix(
         affine[0], affine[1], affine[2], affine[3], affine[4], affine[5]));
     gc->DrawRectangle(-oct / 2.0, -oct / 2.0, oct, oct);
-    /* {
+    /* Don't draw the center of the detector, use a crosshair cursor instead
+    {
         wxGraphicsPath p = gc->CreatePath();
         p.MoveToPoint(5.0, 1.0);
         p.AddLineToPoint(1.0, 5.0);
@@ -31,6 +33,18 @@ void DoseWindow::paint_detector(wxPaintDC &dc)
         gc->StrokePath(p);
     } */
     gc->PopState();
+    {
+        wxGraphicsPath p = gc->CreatePath();
+        double ldx, ldy;
+        wxGetApp().get_line_dose(&ldx, &ldy);
+        gc->Translate(ldx, ldy);
+        p.MoveToPoint(0.0, -xhair);
+        p.AddLineToPoint(0.0, xhair);
+        p.MoveToPoint(-xhair, 0.0);
+        p.AddLineToPoint(xhair, 0.0);
+        p.AddCircle(0.0, 0.0, xhair / 2.0);
+        gc->StrokePath(p);
+    }
     delete gc;
 }
 
@@ -42,8 +56,8 @@ void DoseWindow::paint_bitmap(wxPaintDC &dc)
     if (!pimg.IsOk()) {
         return;
     }
+    dc.SetClippingRegion(origin, psz);
     dc.SetDeviceOrigin(origin.x, origin.y);
-    dc.SetClippingRegion(wxPoint(0, 0), psz);
     dc.DrawBitmap(pimg, 0, 0);
 }
 
@@ -86,10 +100,32 @@ void DoseWindow::on_lmb(wxMouseEvent &e)
     e.Skip();
 }
 
+void DoseWindow::on_rmb(wxMouseEvent &e)
+{
+    if (dose_loaded()) {
+        wxPoint p = e.GetPosition();
+        if (point_in_dose(p)) {
+            double x, y;
+            const double conv[2] = {
+                static_cast<double>(proton_image_dimension(img, 0)) / proton_dose_width(dose, 0),
+                static_cast<double>(proton_image_dimension(img, 1)) / proton_dose_width(dose, 2)
+            };
+            p.x -= origin.x;
+            p.y -= origin.y;
+            x = static_cast<double>(p.x) / conv[0] + proton_dose_origin(dose, 0);
+            y = static_cast<double>(p.y) / conv[1] + proton_dose_origin(dose, 2);
+            wxGetApp().set_line_dose(x, y);
+        }
+    }
+    e.Skip();
+}
+
 void DoseWindow::on_motion(wxMouseEvent &e)
 {
     if (e.LeftIsDown()) {
         on_lmb(e);
+    } else if (e.RightIsDown()) {
+        on_rmb(e);
     } else {
         e.Skip();
     }
@@ -168,6 +204,7 @@ DoseWindow::DoseWindow(wxWindow *parent):
     this->Bind(wxEVT_PAINT, &DoseWindow::on_paint, this);
     this->Bind(wxEVT_SIZE, &DoseWindow::on_size, this);
     this->Bind(wxEVT_LEFT_DOWN, &DoseWindow::on_lmb, this);
+    this->Bind(wxEVT_RIGHT_DOWN, &DoseWindow::on_rmb, this);
     this->Bind(wxEVT_MOTION, &DoseWindow::on_motion, this);
 
 #if _WIN32
@@ -201,6 +238,14 @@ void DoseWindow::on_depth_changed(wxCommandEvent &WXUNUSED(e))
         image_write();
         this->Refresh();
     }
+}
+
+void DoseWindow::on_plot_changed(wxCommandEvent &WXUNUSED(e))
+{
+    /* this is checked in the parent scope
+    if (dose_loaded()) { */
+        this->Refresh();
+    /* } */
 }
 
 void DoseWindow::on_shift_changed(wxCommandEvent &WXUNUSED(e))

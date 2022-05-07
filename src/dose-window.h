@@ -21,6 +21,7 @@ class DoseWindow : public wxWindow {
     void on_paint(wxPaintEvent &e);
     void on_size(wxSizeEvent &e);
     void on_lmb(wxMouseEvent &e);
+    void on_rmb(wxMouseEvent &e);
     void on_motion(wxMouseEvent &e);
 
     void affine_write();
@@ -38,6 +39,7 @@ public:
     constexpr bool dose_loaded() const noexcept { return dose != nullptr; }
 
     void on_depth_changed(wxCommandEvent &e);
+    void on_plot_changed(wxCommandEvent &e);
     void on_shift_changed(wxCommandEvent &e);
 
     float get_max_depth() const noexcept;
