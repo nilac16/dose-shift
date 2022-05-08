@@ -14,6 +14,7 @@ class DoseWindow : public wxWindow {
     wxPoint origin;
 
     double affine[6];
+    double conv[2];
 
     void paint_detector(wxPaintDC &dc);
     void paint_bitmap(wxPaintDC &dc);
@@ -24,6 +25,7 @@ class DoseWindow : public wxWindow {
     void on_rmb(wxMouseEvent &e);
     void on_motion(wxMouseEvent &e);
 
+    void conv_write();
     void affine_write();
 
     void image_write();
@@ -43,6 +45,8 @@ public:
     void on_shift_changed(wxCommandEvent &e);
 
     float get_max_depth() const noexcept;
+
+    const ProtonDose *get_dose() const noexcept;
 };
 
 

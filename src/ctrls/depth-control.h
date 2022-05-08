@@ -24,6 +24,7 @@ public:
     void set_value(int x);
 
     void set_max_depth(int depth);
+    int get_max() const;
 };
 
 

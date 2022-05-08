@@ -30,6 +30,7 @@ long proton_dose_dimension(const ProtonDose *dose, int dim);
 
 double proton_dose_width(const ProtonDose *dose, int dim);
 
+float proton_dose_max(const ProtonDose *dose);
 double proton_dose_max_depth(const ProtonDose *dose);
 float proton_dose_coronal_aspect(const ProtonDose *dose);
 
@@ -38,6 +39,7 @@ float proton_dose_coronal_aspect(const ProtonDose *dose);
  *  I could (should) perhaps write a version of this that interpolates 
  *  a plane of arbitrary physical dimension and orientation, but that 
  *  may not be fast enough for real-time display (unless I use SSE?)
+ *                                       I should do ^^ this ^^ anyway
  */
 void proton_dose_get_plane(const ProtonDose *dose,
                            ProtonImage *img, float depth,

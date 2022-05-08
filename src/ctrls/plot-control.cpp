@@ -27,6 +27,7 @@ PlotControl::PlotControl(wxWindow *parent):
     wxPanel(parent),
     xtxt(new wxTextCtrl(this, wxID_ANY, PLOT_ZERO, wxDefaultPosition, ENTRYSZ)),
     ytxt(new wxTextCtrl(this, wxID_ANY, PLOT_ZERO, wxDefaultPosition, ENTRYSZ)),
+    obtn(new wxButton(this, wxID_ANY, wxT("Open plot window"))),
     x(0.0), y(0.0)
 {
     wxFloatingPointValidator<double> v;
@@ -35,7 +36,10 @@ PlotControl::PlotControl(wxWindow *parent):
     hbox->Add(xtxt, 1);
     hbox->Add(new wxStaticText(this, wxID_ANY, PLOT_YLABEL, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE_HORIZONTAL), 1);
     hbox->Add(ytxt, 1);
-    this->SetSizerAndFit(hbox);
+    wxBoxSizer *vbox = new wxBoxSizer(wxVERTICAL);
+    vbox->Add(hbox, 0, wxEXPAND);
+    vbox->Add(obtn, 1, wxEXPAND);
+    this->SetSizer(vbox);
 
     v.SetPrecision(2);
     xtxt->SetValidator(v);

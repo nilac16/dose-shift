@@ -20,9 +20,9 @@ public:
     float get_depth() const;
 
     /** Also changes the current depth to zero if it is greater than the 
-     *  passed value
-     */
+     *  passed value */
     void set_max_depth(int depth);
+    double get_max_slider_depth() const;
 
     void get_detector_affine(double affine[]) const noexcept;
 

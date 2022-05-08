@@ -20,10 +20,13 @@ void MainApplication::initialize_main_window()
     vbox->Add(lwnd, 0, wxEXPAND);
     frame->SetSizer(vbox);
 
+    pwnd = new PlotWindow(frame);
+
     lwnd->Bind(wxEVT_FILEPICKER_CHANGED, &MainApplication::on_dicom_load, this);
     cwnd->Bind(EVT_DEPTH_CONTROL, &DoseWindow::on_depth_changed, canv);
     cwnd->Bind(EVT_PLOT_CONTROL, &MainApplication::on_plot_change, this);
     cwnd->Bind(EVT_SHIFT_CONTROL, &DoseWindow::on_shift_changed, canv);
+    cwnd->Bind(wxEVT_BUTTON, &MainApplication::on_plot_open, this);
 }
 
 void MainApplication::on_dicom_load(wxFileDirPickerEvent &e)
@@ -40,6 +43,11 @@ void MainApplication::on_plot_change(wxCommandEvent &e)
     if (canv->dose_loaded()) {
         canv->on_plot_changed(e);
     }
+}
+
+void MainApplication::on_plot_open(wxCommandEvent &WXUNUSED(e))
+{
+    pwnd->Show();
 }
 
 float MainApplication::get_depth() const
@@ -70,6 +78,26 @@ void MainApplication::set_line_dose(double x, double y)
 void MainApplication::set_translation(double x, double y)
 {
     cwnd->set_translation(x, y);
+}
+
+bool MainApplication::dose_loaded() const noexcept
+{
+    return canv->dose_loaded();
+}
+
+const ProtonDose *MainApplication::get_dose() const noexcept
+{
+    return canv->get_dose();
+}
+
+double MainApplication::get_max_slider_depth() const
+{
+    return cwnd->get_max_slider_depth();
+}
+
+double MainApplication::get_max_dose() const noexcept
+{
+    return static_cast<double>(proton_dose_max(canv->get_dose()));
 }
 
 bool MainApplication::OnInit()

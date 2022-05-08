@@ -30,6 +30,11 @@ void CtrlWindow::set_max_depth(int depth)
     dcon->set_max_depth(depth);
 }
 
+double CtrlWindow::get_max_slider_depth() const
+{
+    return static_cast<double>(dcon->get_max());
+}
+
 void CtrlWindow::get_detector_affine(double affine[]) const noexcept
 {
     scon->get_affine(affine);

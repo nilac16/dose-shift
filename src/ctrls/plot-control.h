@@ -10,6 +10,7 @@ wxDECLARE_EVENT(EVT_PLOT_CONTROL, wxCommandEvent);
 
 class PlotControl : public wxPanel {
     wxTextCtrl *xtxt, *ytxt;
+    wxButton *obtn;
     double x, y;
 
     void post_change_event();

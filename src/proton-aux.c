@@ -29,7 +29,7 @@ static float cmap_minf(float x, float y)
 }
 
 static float cmap_clamp(float x, const float lbound, const float ubound)
-/** Thank you, Jorge on Stack Overflow. This never even occurred to me.
+/** Credit to Jorge on Stack Overflow. This never even occurred to me.
  * 
  *              clamp(x, l, u) = min(max(x, l), u)
  */
@@ -44,7 +44,6 @@ static unsigned char cmap_red(float x)
 }
 
 static unsigned char cmap_green(float x)
-/* Two branches isn't that bad... */
 {
     if (x < 0.5f) {
         x = 2.0f * x;
@@ -119,8 +118,7 @@ static void proton_vecadd(const double vec1[_q(static 2)],
 {
     __m128d v1 = _mm_load_pd(vec1);
     __m128d v2 = _mm_load_pd(vec2);
-    v2 = _mm_add_pd(v1, v2);
-    _mm_store_pd(vec2, v2);
+    _mm_store_pd(vec2, _mm_add_pd(v1, v2));
 }
 
 #endif
@@ -128,7 +126,7 @@ static void proton_vecadd(const double vec1[_q(static 2)],
 void proton_affine_matmul(const double mat1[_q(static 6)],
                           double mat2[_q(static 6)])
 {
-    proton_vecmul(mat1, mat2 + 0x0);
+    proton_vecmul(mat1, mat2 + 0x0); 
     proton_vecmul(mat1, mat2 + 0x2);
     proton_vecmul(mat1, mat2 + 0x4);
     proton_vecadd(mat1 + 0x4, mat2 + 0x4);

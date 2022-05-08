@@ -77,3 +77,8 @@ void DepthControl::set_max_depth(int depth)
 {
     slider->SetMax(depth);
 }
+
+int DepthControl::get_max() const
+{
+    return slider->GetMax();
+}

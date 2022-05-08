@@ -7,10 +7,10 @@ void DoseWindow::paint_detector(wxPaintDC &dc)
 {
     constexpr double xhair = 5.0;
     constexpr double oct = 260.0;
-    const double conv[2] = {
+    /* const double conv[2] = {
         static_cast<double>(proton_image_dimension(img, 0)) / proton_dose_width(dose, 0),
         static_cast<double>(proton_image_dimension(img, 1)) / proton_dose_width(dose, 2)
-    };
+    }; */
     wxGraphicsContext *gc = wxGraphicsContext::Create(dc);
     gc->Scale(conv[0], conv[1]);
     gc->Translate(-proton_dose_origin(dose, 0), -proton_dose_origin(dose, 2));
@@ -42,7 +42,7 @@ void DoseWindow::paint_detector(wxPaintDC &dc)
         p.AddLineToPoint(0.0, xhair);
         p.MoveToPoint(-xhair, 0.0);
         p.AddLineToPoint(xhair, 0.0);
-        p.AddCircle(0.0, 0.0, xhair / 2.0);
+        p.AddCircle(0.0, 0.0, xhair / 2.00);
         gc->StrokePath(p);
     }
     delete gc;
@@ -50,21 +50,17 @@ void DoseWindow::paint_detector(wxPaintDC &dc)
 
 void DoseWindow::paint_bitmap(wxPaintDC &dc)
 {
-    const wxSize psz(proton_image_dimension(img, 0),
-                     proton_image_dimension(img, 1));
-    wxImage pimg(psz, proton_image_raw(img), true);
-    if (!pimg.IsOk()) {
-        return;
-    }
+    const wxSize psz(
+        proton_image_dimension(img, 0), proton_image_dimension(img, 1));
     dc.SetClippingRegion(origin, psz);
     dc.SetDeviceOrigin(origin.x, origin.y);
-    dc.DrawBitmap(pimg, 0, 0);
+    dc.DrawBitmap(wxImage(psz, proton_image_raw(img), true), 0, 0);
 }
 
 void DoseWindow::on_paint(wxPaintEvent &WXUNUSED(e))
 {
     wxPaintDC dc(this);
-    if (dose_loaded()) {
+    if (dose_loaded() && !proton_image_empty(img)) {
         paint_bitmap(dc);
         if (wxGetApp().detector_enabled()) {
             paint_detector(dc);
@@ -77,6 +73,7 @@ void DoseWindow::on_size(wxSizeEvent &e)
     if (dose_loaded()) {
         image_realloc_and_write(e.GetSize());
         affine_write();
+        conv_write();
     }
 }
 
@@ -86,10 +83,10 @@ void DoseWindow::on_lmb(wxMouseEvent &e)
         wxPoint p = e.GetPosition();
         if (point_in_dose(p)) {
             double x, y;
-            const double conv[2] = {
+            /* const double conv[2] = {
                 static_cast<double>(proton_image_dimension(img, 0)) / proton_dose_width(dose, 0),
                 static_cast<double>(proton_image_dimension(img, 1)) / proton_dose_width(dose, 2)
-            };
+            }; */
             p.x -= origin.x;
             p.y -= origin.y;
             x = static_cast<double>(p.x) / conv[0] + proton_dose_origin(dose, 0);
@@ -106,10 +103,10 @@ void DoseWindow::on_rmb(wxMouseEvent &e)
         wxPoint p = e.GetPosition();
         if (point_in_dose(p)) {
             double x, y;
-            const double conv[2] = {
+            /* const double conv[2] = {
                 static_cast<double>(proton_image_dimension(img, 0)) / proton_dose_width(dose, 0),
                 static_cast<double>(proton_image_dimension(img, 1)) / proton_dose_width(dose, 2)
-            };
+            }; */
             p.x -= origin.x;
             p.y -= origin.y;
             x = static_cast<double>(p.x) / conv[0] + proton_dose_origin(dose, 0);
@@ -131,13 +128,19 @@ void DoseWindow::on_motion(wxMouseEvent &e)
     }
 }
 
+void DoseWindow::conv_write()
+{
+    conv[0] = static_cast<double>(proton_image_dimension(img, 0)) / proton_dose_width(dose, 0);
+    conv[1] = static_cast<double>(proton_image_dimension(img, 1)) / proton_dose_width(dose, 2);
+}
+
 void DoseWindow::affine_write()
 {
     /* As it turns out, composing affine transformations by matrix 
     multiplication does not have the expected effect on the state of a 
     wxGraphicsContext. Unless I can determine a cause/fix (including 
     potential programmer error), this function and the class member it
-    writes to are largely  obsolete.
+    writes to are largely obsolete.
 
     const double conv[2] = {
         static_cast<double>(proton_image_dimension(img, 0)) / proton_dose_width(dose, 0),
@@ -225,6 +228,7 @@ void DoseWindow::load_file(const char *filename)
     if (dose) {
         image_realloc_and_write(this->GetSize());
         affine_write();
+        conv_write();
     } else {
         wxMessageBox(wxT("Failed to load dose"),
             wxT("Load failed"), wxICON_ERROR, this);
@@ -259,4 +263,9 @@ void DoseWindow::on_shift_changed(wxCommandEvent &WXUNUSED(e))
 float DoseWindow::get_max_depth() const noexcept
 {
     return proton_dose_max_depth(dose);
+}
+
+const ProtonDose *DoseWindow::get_dose() const noexcept
+{
+    return dose;
 }

@@ -105,6 +105,11 @@ double proton_dose_width(const ProtonDose *dose, int dim)
     return STATIC_CAST(double, dose->px_dimensions[dim]) * dose->px_spacing[dim];
 }
 
+float proton_dose_max(const ProtonDose *dose)
+{
+    return dose->dmax;
+}
+
 static int proton_dose_plane_nonzero(const float *dline, const long hskip,
                                      const long axskip, const long kend)
 {
@@ -283,8 +288,7 @@ void proton_dose_get_plane(const ProtonDose *dose,
     for (a[1] = 0; a[1] < alim[1]; a[1]++) {
         const float *const dline = dptr;
         for (a[0] = 0; a[0] < alim[0]; a[0]++, dptr++) {
-            proton_dose_load_interpolant(interp, dptr,
-                                         dose->px_dimensions[0],
+            proton_dose_load_interpolant(interp, dptr, dose->px_dimensions[0],
                                          axskip, z, dose->dmax);
             proton_dose_interpolate_cell(interp, a, alim, blim, buf, colormap);
         }
