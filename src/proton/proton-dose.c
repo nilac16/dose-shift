@@ -199,7 +199,8 @@ static void proton_dose_fma(float a[_q(restrict static 2)],
     a[1] = fmaf(a[1], b[1], c[1]);
 }
 
-static void proton_dose_fcast(float dst[_q(static 2)], const long src[_q(static 2)])
+static void proton_dose_fcast(float dst[_q(restrict static 2)],
+                              const long src[_q(static 2)])
 {
     dst[0] = STATIC_CAST(float, src[0]);
     dst[1] = STATIC_CAST(float, src[1]);
@@ -293,5 +294,89 @@ void proton_dose_get_plane(const ProtonDose *dose,
             proton_dose_interpolate_cell(interp, a, alim, blim, buf, colormap);
         }
         dptr = dline + axskip;
+    }
+}
+
+struct _proton_line {
+    double depth;
+    long npts;
+    float dose[];
+};
+
+ProtonLine *proton_line_create(const ProtonDose *dose, double depth)
+{
+    const long N = STATIC_CAST(long, floor(depth / dose->px_spacing[1]));
+    ProtonLine *line = malloc(sizeof *line + sizeof *line->dose * N);
+    if (line) {
+        line->depth = depth;
+        line->npts = N;
+    }
+    return line;
+}
+
+void proton_line_destroy(ProtonLine *line)
+{
+    free(line);
+}
+
+long proton_line_length(const ProtonLine *line)
+{
+    return line->npts;
+}
+
+const float *proton_line_raw(const ProtonLine *line)
+{
+    return line->dose;
+}
+
+static void proton_dose_find_square(const ProtonDose *dose, long a[_q(static 2)],
+                                    double x, double y, float r[_q(static 2)])
+{
+    double tmp[2];
+    x = (x - dose->top_left[0]) / dose->px_spacing[0];
+    y = (y - dose->top_left[2]) / dose->px_spacing[2];
+    tmp[0] = floor(x);
+    tmp[1] = floor(y);
+    r[0] = STATIC_CAST(float, x - tmp[0]);
+    r[1] = STATIC_CAST(float, y - tmp[1]);
+    a[0] = STATIC_CAST(long, tmp[0]);
+    a[1] = STATIC_CAST(long, tmp[1]);
+}
+
+static int proton_dose_square_out_of_bounds(const ProtonDose *dose,
+                                            const long a[_q(static 2)])
+{
+    const int xbnd = (a[0] < 0) || (a[0] > dose->px_dimensions[0]);
+    const int ybnd = (a[1] < 0) || (a[1] > dose->px_dimensions[2]);
+    return xbnd || ybnd;
+}
+
+static float proton_dose_interpolate_square(const float *dptr, const long axskip,
+                                            const float r[_q(static 2)])
+{
+    float interp[4] = { dptr[0], dptr[1], dptr[axskip], dptr[axskip + 1] };
+    interp[1] -= interp[0];
+    interp[3] -= interp[1] + interp[2];
+    interp[2] -= interp[0];
+    return proton_dose_interp_eval(interp, r);
+}
+
+void proton_dose_get_line(const ProtonDose *dose, ProtonLine *line,
+                          double x, double y)
+{
+    const unsigned long axskip = dose->px_dimensions[0] * dose->px_dimensions[1];
+    const float *dptr;
+    float *lptr, *const lend = line->dose + line->npts;
+    long a[2];
+    float r[2];
+    proton_dose_find_square(dose, a, x, y, r);
+    if (proton_dose_square_out_of_bounds(dose, a)) {
+        memset(line->dose, 0, sizeof *line->dose * line->npts);
+        return;
+    }
+    dptr = dose->data + a[1] * axskip + a[0];
+    for (lptr = line->dose; lptr < lend; lptr++) {
+        *lptr = proton_dose_interpolate_square(dptr, axskip, r);
+        dptr += dose->px_dimensions[0];
     }
 }

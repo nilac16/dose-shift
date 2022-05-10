@@ -30,7 +30,7 @@ int proton_image_realloc(ProtonImage **img, long width, long height)
     const long N_old = (*img) ? (*img)->bufwidth : 0;
     if (N > N_old) {
         free(*img);
-        *img = proton_image_flexible_alloc(N);
+        *img = proton_image_flexible_alloc((3 * N) / 2);
         if (!*img) {
             return 1;
         }

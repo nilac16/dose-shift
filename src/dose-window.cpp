@@ -180,8 +180,7 @@ void DoseWindow::image_realloc_and_write(const wxSize &csz)
         origin.y = 0;
     }
     if (proton_image_realloc(&img, w, h)) {
-        proton_dose_destroy(dose);
-        dose = nullptr;
+        unload_dose();
         wxMessageBox(wxT("Failed to reallocate image buffer\n"\
             "The dose has been unloaded"),
             wxT("Realloc failed"), wxICON_ERROR);
@@ -198,7 +197,7 @@ bool DoseWindow::point_in_dose(const wxPoint &p)
 }
 
 DoseWindow::DoseWindow(wxWindow *parent):
-    wxWindow(parent, wxID_ANY),
+    wxWindow(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxFULL_REPAINT_ON_RESIZE),
     dose(nullptr),
     img(nullptr)
 {
@@ -268,4 +267,10 @@ float DoseWindow::get_max_depth() const noexcept
 const ProtonDose *DoseWindow::get_dose() const noexcept
 {
     return dose;
+}
+
+void DoseWindow::unload_dose() noexcept
+{
+    proton_dose_destroy(dose);
+    dose = nullptr;
 }

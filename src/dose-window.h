@@ -47,6 +47,7 @@ public:
     float get_max_depth() const noexcept;
 
     const ProtonDose *get_dose() const noexcept;
+    void unload_dose() noexcept;
 };
 
 

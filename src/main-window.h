@@ -40,6 +40,8 @@ public:
     double get_max_slider_depth() const;
     double get_max_dose() const noexcept;
 
+    void unload_dose() noexcept;
+
     virtual bool OnInit() override;
 };
 

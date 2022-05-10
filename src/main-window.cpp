@@ -35,6 +35,7 @@ void MainApplication::on_dicom_load(wxFileDirPickerEvent &e)
     canv->load_file(str.c_str());
     if (canv->dose_loaded()) {
         cwnd->set_max_depth(canv->get_max_depth());
+        pwnd->new_dose_loaded();
     }
 }
 
@@ -42,6 +43,7 @@ void MainApplication::on_plot_change(wxCommandEvent &e)
 {
     if (canv->dose_loaded()) {
         canv->on_plot_changed(e);
+        pwnd->write_line_dose();
     }
 }
 
@@ -100,15 +102,26 @@ double MainApplication::get_max_dose() const noexcept
     return static_cast<double>(proton_dose_max(canv->get_dose()));
 }
 
+void MainApplication::unload_dose() noexcept
+{
+    canv->unload_dose();
+}
+
 bool MainApplication::OnInit()
 {
     try {
         initialize_main_window();
         frame->Show();
         return true;
-    } catch (std::exception &) {
-        wxMessageBox(wxT("Failed to initialize the main window"),
-            wxT("Init failed"), wxICON_ERROR);
+    } catch (std::bad_alloc &e) {
+        wxString str;
+        str.Printf(wxT("Bad alloc thrown while initializing window: %s"), e.what());
+        wxMessageBox(str, wxT("Init failed"), wxICON_ERROR);
         return false;
-    }
+    } catch (std::exception &e) {
+        wxString str;
+        str.Printf(wxT("Failed to initialize the main window: %s"), e.what());
+        wxMessageBox(str, wxT("Init failed"), wxICON_ERROR);
+        return false;
+    }    
 }

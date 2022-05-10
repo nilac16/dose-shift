@@ -34,7 +34,7 @@ float proton_dose_max(const ProtonDose *dose);
 double proton_dose_max_depth(const ProtonDose *dose);
 float proton_dose_coronal_aspect(const ProtonDose *dose);
 
-/** Interpolates the dose grid onto the 2D buffer at @p buf
+/** Interpolates the dose grid onto the 2D buffer at @p img
  * 
  *  I could (should) perhaps write a version of this that interpolates 
  *  a plane of arbitrary physical dimension and orientation, but that 
@@ -44,6 +44,23 @@ float proton_dose_coronal_aspect(const ProtonDose *dose);
 void proton_dose_get_plane(const ProtonDose *dose,
                            ProtonImage *img, float depth,
                            void (*colormap)(float, unsigned char *));
+
+
+typedef struct _proton_line/* {
+    double depth;
+    long npts;
+    float dose[];
+} */ProtonLine;
+
+ProtonLine *proton_line_create(const ProtonDose *dose, double depth);
+void proton_line_destroy(ProtonLine *line);
+
+long proton_line_length(const ProtonLine *line);
+const float *proton_line_raw(const ProtonLine *line);
+
+/** Interpolates the line dose from the top to maxdepth */
+void proton_dose_get_line(const ProtonDose *dose, ProtonLine *line,
+                          double x, double y);
 
 
 #if __cplusplus
