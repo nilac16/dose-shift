@@ -305,7 +305,7 @@ struct _proton_line {
 
 ProtonLine *proton_line_create(const ProtonDose *dose, double depth)
 {
-    const long N = STATIC_CAST(long, floor(depth / dose->px_spacing[1]));
+    const long N = STATIC_CAST(long, ceil(depth / dose->px_spacing[1])) + 1;
     ProtonLine *line = malloc(sizeof *line + sizeof *line->dose * N);
     if (line) {
         line->depth = depth;

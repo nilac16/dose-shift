@@ -9,7 +9,10 @@
 #endif
 
 #define DOSEMAX_MULT    1.0
-#define DEPTHMAX_MULT   1.0
+#define DEPTHMAX_MULT   1.1
+
+#define GRID_OPACITY        0.2
+#define LINEDOSE_OPACITY    0.8
 
 
 void PlotWindow::draw_line_dose(wxGraphicsContext *gc, const wxPoint2DDouble &porigin,
@@ -19,13 +22,14 @@ void PlotWindow::draw_line_dose(wxGraphicsContext *gc, const wxPoint2DDouble &po
     const double depthscale = pwidth.m_x * proton_dose_spacing(wxGetApp().get_dose(), 1) / static_cast<double>(xticks.back().second);
     const float *ld = proton_line_raw(line);
     wxGraphicsPath p;
+    double dose;
     long i;
-    gc->BeginLayer(0.8);
+    gc->BeginLayer(LINEDOSE_OPACITY);
     p = gc->CreatePath();
     p.MoveToPoint(porigin.m_x,
         std::fma(static_cast<double>(*ld), dosescale, porigin.m_y));
     for (i = 1; i < proton_line_length(line); i++, ld++) {
-        const double dose = static_cast<double>(*ld);
+        /* const double  */dose = static_cast<double>(*ld);
         p.AddLineToPoint(
             std::fma(static_cast<double>(i), depthscale, porigin.m_x),
             std::fma(dose, dosescale, porigin.m_y));
@@ -41,7 +45,7 @@ void PlotWindow::draw_dashes(wxGraphicsContext *gc, const wxPoint2DDouble &porig
     const double tikscale = pwidth.m_y / static_cast<double>(yticks.size() - 1);
     wxGraphicsPath p = gc->CreatePath();
     unsigned i;
-    gc->BeginLayer(0.25);
+    gc->BeginLayer(GRID_OPACITY);
     gc->SetPen(*wxBLACK_DASHED_PEN);
     for (i = 1; i < xticks.size(); i++) {
         const double tikx = std::fma(xticks[i].first, pwidth.m_x, porigin.m_x);
@@ -97,14 +101,14 @@ void PlotWindow::draw_yaxis(wxGraphicsContext *gc, const wxPoint2DDouble &porigi
         const double tiky = std::fma(static_cast<double>(i), tikscale, porigin.m_y);
         p.MoveToPoint(porigin.m_x, tiky);
         p.AddLineToPoint(porigin.m_x - tikwidth, tiky);
-        lbl.Printf(wxT("%.2f "), yticks[i]);
+        lbl.Printf(wxT("%.2f"), yticks[i]);
         gc->GetTextExtent(lbl, &txw, &txh);
         gc->DrawText(lbl, porigin.m_x - tikwidth - txw, std::fma(txh, -0.5, tiky));
     }
     gc->SetFont(*wxNORMAL_FONT, *wxBLACK);
     lbl = wxT("Dose (Gy)");
     gc->GetTextExtent(lbl, &txw, &txh);
-    gc->DrawText(lbl, std::fma(tikwidth, -8.0, porigin.m_x - txh),
+    gc->DrawText(lbl, std::fma(tikwidth, -9.0, porigin.m_x - txh),
         std::fma(txw, 0.5, std::fma(pwidth.m_y, 0.5, porigin.m_y)), M_PI_2);
     gc->StrokePath(p);
 }
@@ -144,11 +148,21 @@ void PlotWindow::draw_plot(wxGraphicsContext *gc)
     draw_line_dose(gc, porigin, pwidth);
 }
 
+template <typename HDC>
+static wxGraphicsContext *get_graphics_context(const HDC &dc)
+{
+/* #if _WIN32
+    return wxGraphicsRenderer::GetDirect2DRenderer()->CreateContext(dc);
+#else */
+    return wxGraphicsContext::Create(dc);
+/* #endif */
+}
+
 void PlotWindow::on_evt_paint(wxPaintEvent &WXUNUSED(e))
 {
     wxPaintDC dc(canv);
     if (wxGetApp().dose_loaded()) {
-        wxGraphicsContext *gc = wxGraphicsContext::Create(dc);
+        wxGraphicsContext *gc = get_graphics_context(dc);
         draw_plot(gc);
         delete gc;
     }
@@ -159,6 +173,18 @@ void PlotWindow::on_evt_close(wxCloseEvent &WXUNUSED(e))
     this->Show(false);
 }
 
+
+/** HI:
+ *  FIXME:
+ * 
+ *  This function is SAFE
+ *  
+ *  That other one, that allocates the line?
+ * 
+ *  That one isn't
+ * 
+ *  COM-MUN-NI-CATE
+ */
 static long plot_window_compute_max_depth()
 {
     double maxdepth = wxGetApp().get_max_slider_depth();
@@ -182,6 +208,7 @@ void PlotWindow::write_xaxis()
             break;
         }
     }
+    [[unlikely]]
     if (!div) {
         /* Is this even possible? */
         xticks.clear();
@@ -214,16 +241,22 @@ void PlotWindow::write_yaxis()
 
 void PlotWindow::allocate_line_dose()
 {
+    proton_line_destroy(line);
     line = proton_line_create(wxGetApp().get_dose(),
-        wxGetApp().get_max_slider_depth());
+        DEPTHMAX_MULT * wxGetApp().get_max_slider_depth());
 }
 
 PlotWindow::PlotWindow(wxWindow *parent):
     wxFrame(parent, wxID_ANY, wxT("Plot window"), wxDefaultPosition, wxSize(640, 480)),
-    canv(new wxWindow(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxFULL_REPAINT_ON_RESIZE))
+    canv(new wxWindow(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxFULL_REPAINT_ON_RESIZE)),
+    line(nullptr)
 {
     this->Bind(wxEVT_CLOSE_WINDOW, &PlotWindow::on_evt_close, this);
     canv->Bind(wxEVT_PAINT, &PlotWindow::on_evt_paint, this);
+
+#if _WIN32
+    canv->SetDoubleBuffered(true);
+#endif
 }
 
 void PlotWindow::write_line_dose()
