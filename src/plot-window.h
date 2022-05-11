@@ -39,7 +39,7 @@ public:
     PlotWindow(wxWindow *parent);
 
     void write_line_dose();
-
+    void redraw();
     void new_dose_loaded();
 };
 

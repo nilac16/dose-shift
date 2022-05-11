@@ -329,6 +329,11 @@ const float *proton_line_raw(const ProtonLine *line)
     return line->dose;
 }
 
+double proton_line_depth(const ProtonLine *line)
+{
+    return line->depth;
+}
+
 static void proton_dose_find_square(const ProtonDose *dose, long a[_q(static 2)],
                                     double x, double y, float r[_q(static 2)])
 {

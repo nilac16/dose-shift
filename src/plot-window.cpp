@@ -8,19 +8,27 @@
 #   define M_PI_2		1.57079632679489661923	/* pi/2 */
 #endif
 
+#define DOSEMAX_MULT    1.0
+#define DEPTHMAX_MULT   1.0
+
 
 void PlotWindow::draw_line_dose(wxGraphicsContext *gc, const wxPoint2DDouble &porigin,
                                 const wxPoint2DDouble &pwidth)
 {
-    const double depthinc = proton_dose_spacing(wxGetApp().get_dose(), 1) / pwidth.m_x;
+    const double dosescale = pwidth.m_y / yticks.back();
+    const double depthscale = pwidth.m_x * proton_dose_spacing(wxGetApp().get_dose(), 1) / static_cast<double>(xticks.back().second);
     const float *ld = proton_line_raw(line);
     wxGraphicsPath p;
     long i;
     gc->BeginLayer(0.8);
     p = gc->CreatePath();
-    p.MoveToPoint(porigin.m_x, porigin.m_y + *ld / pwidth.m_y);
-    for (i = 1; i < proton_line_length(line); i++) {
-        p.AddLineToPoint(porigin.m_x + depthinc * i, porigin.m_y + ld[i] / pwidth.m_y);
+    p.MoveToPoint(porigin.m_x,
+        std::fma(static_cast<double>(*ld), dosescale, porigin.m_y));
+    for (i = 1; i < proton_line_length(line); i++, ld++) {
+        const double dose = static_cast<double>(*ld);
+        p.AddLineToPoint(
+            std::fma(static_cast<double>(i), depthscale, porigin.m_x),
+            std::fma(dose, dosescale, porigin.m_y));
     }
     gc->SetPen(*wxBLUE_PEN);
     gc->StrokePath(p);
@@ -155,7 +163,7 @@ static long plot_window_compute_max_depth()
 {
     double maxdepth = wxGetApp().get_max_slider_depth();
     const double max_actual = std::floor(proton_dose_width(wxGetApp().get_dose(), 1));
-    maxdepth *= 1.2;
+    maxdepth *= DEPTHMAX_MULT;
     maxdepth = std::clamp<double>(std::floor(maxdepth), 0.0, max_actual);
     return static_cast<long>(maxdepth);
 }
@@ -195,7 +203,7 @@ void PlotWindow::write_xaxis()
 void PlotWindow::write_yaxis()
 {
     constexpr long nticks = 5;
-    const double maxdose = 1.2 * wxGetApp().get_max_dose();
+    const double maxdose = DOSEMAX_MULT * wxGetApp().get_max_dose();
     const double doseinc = maxdose / static_cast<double>(nticks - 1);
     long i;
     yticks.resize(nticks);
@@ -223,6 +231,12 @@ void PlotWindow::write_line_dose()
     double x, y;
     wxGetApp().get_line_dose(&x, &y);
     proton_dose_get_line(wxGetApp().get_dose(), line, x, y);
+    redraw();
+}
+
+void PlotWindow::redraw()
+{
+    canv->Refresh();
 }
 
 void PlotWindow::new_dose_loaded()
@@ -232,7 +246,7 @@ void PlotWindow::new_dose_loaded()
         write_xaxis();
         write_yaxis();
         write_line_dose();
-        canv->Refresh();
+        redraw();
     } else {
         wxGetApp().unload_dose();
     }

@@ -57,6 +57,7 @@ void proton_line_destroy(ProtonLine *line);
 
 long proton_line_length(const ProtonLine *line);
 const float *proton_line_raw(const ProtonLine *line);
+double proton_line_depth(const ProtonLine *line);
 
 /** Interpolates the line dose from the top to maxdepth */
 void proton_dose_get_line(const ProtonDose *dose, ProtonLine *line,

@@ -44,6 +44,7 @@ void MainApplication::on_plot_change(wxCommandEvent &e)
     if (canv->dose_loaded()) {
         canv->on_plot_changed(e);
         pwnd->write_line_dose();
+        pwnd->redraw();
     }
 }
 
