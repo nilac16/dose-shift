@@ -14,6 +14,8 @@ class PlotWindow : public wxFrame {
     std::vector<std::pair<double, long>> xticks;
     std::vector<double> yticks;
 
+    wxPen dashpen, dosepen;
+
     void draw_line_dose(wxGraphicsContext *gc, const wxPoint2DDouble &porigin,
                         const wxPoint2DDouble &pwidth);
 
@@ -37,6 +39,7 @@ class PlotWindow : public wxFrame {
 
 public:
     PlotWindow(wxWindow *parent);
+    ~PlotWindow();
 
     void write_line_dose();
     void redraw();

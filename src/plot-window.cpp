@@ -14,6 +14,9 @@
 #define GRID_OPACITY        0.2
 #define LINEDOSE_OPACITY    0.8
 
+#define MIN_XTICKS      6
+#define MIN_YTICKS      5
+
 
 void PlotWindow::draw_line_dose(wxGraphicsContext *gc, const wxPoint2DDouble &porigin,
                                 const wxPoint2DDouble &pwidth)
@@ -22,21 +25,19 @@ void PlotWindow::draw_line_dose(wxGraphicsContext *gc, const wxPoint2DDouble &po
     const double depthscale = pwidth.m_x * proton_dose_spacing(wxGetApp().get_dose(), 1) / static_cast<double>(xticks.back().second);
     const float *ld = proton_line_raw(line);
     wxGraphicsPath p;
-    double dose;
     long i;
-    gc->BeginLayer(LINEDOSE_OPACITY);
     p = gc->CreatePath();
+    gc->SetPen(dosepen);
     p.MoveToPoint(porigin.m_x,
         std::fma(static_cast<double>(*ld), dosescale, porigin.m_y));
+    ld++;
     for (i = 1; i < proton_line_length(line); i++, ld++) {
-        /* const double  */dose = static_cast<double>(*ld);
+        const double dose = static_cast<double>(*ld);
         p.AddLineToPoint(
             std::fma(static_cast<double>(i), depthscale, porigin.m_x),
             std::fma(dose, dosescale, porigin.m_y));
     }
-    gc->SetPen(*wxBLUE_PEN);
     gc->StrokePath(p);
-    gc->EndLayer();
 }
 
 void PlotWindow::draw_dashes(wxGraphicsContext *gc, const wxPoint2DDouble &porigin,
@@ -45,8 +46,9 @@ void PlotWindow::draw_dashes(wxGraphicsContext *gc, const wxPoint2DDouble &porig
     const double tikscale = pwidth.m_y / static_cast<double>(yticks.size() - 1);
     wxGraphicsPath p = gc->CreatePath();
     unsigned i;
-    gc->BeginLayer(GRID_OPACITY);
-    gc->SetPen(*wxBLACK_DASHED_PEN);
+    /* gc->BeginLayer(GRID_OPACITY); */
+    gc->Clip(porigin.m_x, porigin.m_y, pwidth.m_x, pwidth.m_y);
+    gc->SetPen(dashpen);
     for (i = 1; i < xticks.size(); i++) {
         const double tikx = std::fma(xticks[i].first, pwidth.m_x, porigin.m_x);
         p.MoveToPoint(tikx, porigin.m_y);
@@ -58,7 +60,7 @@ void PlotWindow::draw_dashes(wxGraphicsContext *gc, const wxPoint2DDouble &porig
         p.AddLineToPoint(porigin.m_x + pwidth.m_x, tiky);
     }
     gc->StrokePath(p);
-    gc->EndLayer();
+    /* gc->EndLayer(); */
 }
 
 void PlotWindow::draw_xaxis(wxGraphicsContext *gc, const wxPoint2DDouble &porigin,
@@ -173,43 +175,30 @@ void PlotWindow::on_evt_close(wxCloseEvent &WXUNUSED(e))
     this->Show(false);
 }
 
-
-/** HI:
- *  FIXME:
- * 
- *  This function is SAFE
- *  
- *  That other one, that allocates the line?
- * 
- *  That one isn't
- * 
- *  COM-MUN-NI-CATE
- */
-static long plot_window_compute_max_depth()
+static double plot_window_compute_max_depth()
 {
-    double maxdepth = wxGetApp().get_max_slider_depth();
     const double max_actual = std::floor(proton_dose_width(wxGetApp().get_dose(), 1));
+    double maxdepth = wxGetApp().get_max_slider_depth();
     maxdepth *= DEPTHMAX_MULT;
     maxdepth = std::clamp<double>(std::floor(maxdepth), 0.0, max_actual);
-    return static_cast<long>(maxdepth);
+    return maxdepth;
 }
 
 void PlotWindow::write_xaxis()
 {
     constexpr std::array<long, 7> tikdivs = { 100, 50, 20, 10, 5, 2, 1 };
-    const long maxdepth = plot_window_compute_max_depth();
+    const long maxdepth = static_cast<long>(plot_window_compute_max_depth());
     double tikinc;
     long div = 0, i;
     ldiv_t res;
     for (const long &tdiv : tikdivs) {
         res = ldiv(maxdepth, tdiv);
-        if (res.quot > 3) {
+        if (res.quot > MIN_XTICKS) {
             div = tdiv;
             break;
         }
     }
-    [[unlikely]]
-    if (!div) {
+    if (!div) [[unlikely]] {
         /* Is this even possible? */
         xticks.clear();
         return;
@@ -229,7 +218,7 @@ void PlotWindow::write_xaxis()
 
 void PlotWindow::write_yaxis()
 {
-    constexpr long nticks = 5;
+    constexpr long nticks = MIN_YTICKS;
     const double maxdose = DOSEMAX_MULT * wxGetApp().get_max_dose();
     const double doseinc = maxdose / static_cast<double>(nticks - 1);
     long i;
@@ -241,15 +230,17 @@ void PlotWindow::write_yaxis()
 
 void PlotWindow::allocate_line_dose()
 {
+    const double maxdepth = plot_window_compute_max_depth();
     proton_line_destroy(line);
-    line = proton_line_create(wxGetApp().get_dose(),
-        DEPTHMAX_MULT * wxGetApp().get_max_slider_depth());
+    line = proton_line_create(wxGetApp().get_dose(), maxdepth);
 }
 
 PlotWindow::PlotWindow(wxWindow *parent):
     wxFrame(parent, wxID_ANY, wxT("Plot window"), wxDefaultPosition, wxSize(640, 480)),
     canv(new wxWindow(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxFULL_REPAINT_ON_RESIZE)),
-    line(nullptr)
+    line(nullptr),
+    dashpen(wxColour(200, 200, 200), 1, wxPENSTYLE_DOT),
+    dosepen(wxColour(60, 60, 255), 2, wxPENSTYLE_SOLID)
 {
     this->Bind(wxEVT_CLOSE_WINDOW, &PlotWindow::on_evt_close, this);
     canv->Bind(wxEVT_PAINT, &PlotWindow::on_evt_paint, this);
@@ -257,6 +248,11 @@ PlotWindow::PlotWindow(wxWindow *parent):
 #if _WIN32
     canv->SetDoubleBuffered(true);
 #endif
+}
+
+PlotWindow::~PlotWindow()
+{
+    proton_line_destroy(line);
 }
 
 void PlotWindow::write_line_dose()

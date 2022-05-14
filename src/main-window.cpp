@@ -50,7 +50,11 @@ void MainApplication::on_plot_change(wxCommandEvent &e)
 
 void MainApplication::on_plot_open(wxCommandEvent &WXUNUSED(e))
 {
-    pwnd->Show();
+    if (!pwnd->IsVisible()) {
+        pwnd->Show();
+    } else {
+        pwnd->Raise();
+    }
 }
 
 float MainApplication::get_depth() const

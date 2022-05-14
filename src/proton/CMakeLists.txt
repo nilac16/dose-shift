@@ -1,3 +1,7 @@
-add_library(proton proton-dose.c proton-image.c dcmload.cc)
+add_library(proton proton-dose.c dcmload.cc)
 
-target_link_libraries(proton PRIVATE ${DCMTK_LIBRARIES})
+add_subdirectory(mcc)
+
+target_link_libraries(proton
+    PUBLIC mcc
+    PRIVATE ${DCMTK_LIBRARIES})

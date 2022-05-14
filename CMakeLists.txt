@@ -33,7 +33,8 @@ add_subdirectory(${CMAKE_SOURCE_DIR}/src)
 add_subdirectory(${CMAKE_SOURCE_DIR}/src/ctrls)
 add_subdirectory(${CMAKE_SOURCE_DIR}/src/proton)
 
-add_executable(${PROJECT_NAME} ${WIN_NATIVE} ${MAIN_SOURCES} ${CTRL_SOURCES})
+add_executable(${PROJECT_NAME} ${WIN_NATIVE}
+    ${MAIN_SOURCES} ${CTRL_SOURCES})
 
 target_link_libraries(${PROJECT_NAME}
     PRIVATE ${wxWidgets_LIBRARIES}

@@ -7,8 +7,6 @@
 extern "C" {
 #endif
 
-#include "proton-image.h"
-
 
 /** Typedef'd because I want to use a C99 flexible array member
  *  I don't want to use the singleton array hack
@@ -34,6 +32,21 @@ float proton_dose_max(const ProtonDose *dose);
 double proton_dose_max_depth(const ProtonDose *dose);
 float proton_dose_coronal_aspect(const ProtonDose *dose);
 
+
+typedef struct _proton_image/* {
+    long dim[2];
+    long bufwidth;
+    unsigned char buf[];
+} */ProtonImage;
+
+int proton_image_realloc(ProtonImage **img, long width, long height);
+void proton_image_destroy(ProtonImage *img);
+
+long proton_image_dimension(const ProtonImage *img, int dim);
+unsigned char *proton_image_raw(ProtonImage *img);
+
+int proton_image_empty(const ProtonImage *img);
+
 /** Interpolates the dose grid onto the 2D buffer at @p img
  * 
  *  I could (should) perhaps write a version of this that interpolates 
@@ -58,6 +71,9 @@ void proton_line_destroy(ProtonLine *line);
 long proton_line_length(const ProtonLine *line);
 const float *proton_line_raw(const ProtonLine *line);
 double proton_line_depth(const ProtonLine *line);
+
+/** DNU, struct must be updated to support this operation */
+double proton_line_get_dose(const ProtonLine *line, double depth);
 
 /** Interpolates the line dose from the top to maxdepth */
 void proton_dose_get_line(const ProtonDose *dose, ProtonLine *line,

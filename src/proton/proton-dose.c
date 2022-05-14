@@ -154,6 +154,65 @@ float proton_dose_coronal_aspect(const ProtonDose *dose)
     return STATIC_CAST(float, dose->px_dimensions[0]) / STATIC_CAST(float, dose->px_dimensions[2]);
 }
 
+struct _proton_image {
+    long dim[2];
+    long bufwidth;
+    unsigned char buf[];
+};
+
+static ProtonImage *proton_image_flexible_alloc(long N)
+{
+    struct _proton_image *img;
+    /* No point in calloc(), since the resize will always be handled by 
+    realloc() */
+    img = malloc(sizeof *img + sizeof *img->buf * N);
+    if (img) {
+        img->bufwidth = N;
+    }
+    return img;
+}
+
+static void proton_image_dim_set(ProtonImage *img, long width, long height)
+{
+    img->dim[0] = width;
+    img->dim[1] = height;
+}
+
+int proton_image_realloc(ProtonImage **img, long width, long height)
+{
+    const long N = 3UL * width * height;
+    const long N_old = (*img) ? (*img)->bufwidth : 0;
+    if (N > N_old) {
+        free(*img);
+        *img = proton_image_flexible_alloc((3 * N) / 2);
+        if (!*img) {
+            return 1;
+        }
+    }
+    proton_image_dim_set(*img, width, height);
+    return 0;
+}
+
+void proton_image_destroy(ProtonImage *img)
+{
+    free(img);
+}
+
+long proton_image_dimension(const ProtonImage *img, int dim)
+{
+    return img->dim[dim];
+}
+
+unsigned char *proton_image_raw(ProtonImage *img)
+{
+    return img->buf;
+}
+
+int proton_image_empty(const ProtonImage *img)
+{
+    return (img->dim[0] == 0) || (img->dim[1] == 0);
+}
+
 static void proton_dose_load_interpolant(float interp[_q(static 4)],
                                          const float *dline,
                                          const long yskip,
@@ -306,7 +365,7 @@ struct _proton_line {
 ProtonLine *proton_line_create(const ProtonDose *dose, double depth)
 {
     const long N = STATIC_CAST(long, ceil(depth / dose->px_spacing[1])) + 1;
-    ProtonLine *line = malloc(sizeof *line + sizeof *line->dose * N);
+    ProtonLine *line = calloc(1, sizeof *line + sizeof *line->dose * N);
     if (line) {
         line->depth = depth;
         line->npts = N;
@@ -334,6 +393,16 @@ double proton_line_depth(const ProtonLine *line)
     return line->depth;
 }
 
+double proton_line_get_dose(const ProtonLine *line, double depth)
+{
+    long i;
+    depth /= line->depth;
+    depth *= STATIC_CAST(double, line->npts);
+    i = STATIC_CAST(long, floor(depth));
+    depth -= floor(depth);
+    return line->dose[i] + (line->dose[i + 1] - line->dose[i]) * depth;
+}
+
 static void proton_dose_find_square(const ProtonDose *dose, long a[_q(static 2)],
                                     double x, double y, float r[_q(static 2)])
 {
@@ -350,9 +419,24 @@ static void proton_dose_find_square(const ProtonDose *dose, long a[_q(static 2)]
 
 static int proton_dose_square_out_of_bounds(const ProtonDose *dose,
                                             const long a[_q(static 2)])
+/** Interpolating the dose at an arbitrary line must account for the 
+ *  possibility that the interpolant would select values outside the dose's 
+ *  compact supported region.
+ *  The values should simply be zero by definition.
+ * 
+ *  The laziest solution was simply to subtract one from the boundaries. It 
+ *  is thus very obvious that the line is being memset to zero if you move 
+ *  the line dose marker to the right or bottom of the image
+ *  
+ *  TODO: Remove this function. Change the interpolant calculator to detect 
+ *  noncompact access, and write zero instead. There will be no branch cost, 
+ *  most lines will be either entirely in or entirely outside of the 
+ *  supported region and the branch predictor will always be correct. Lines 
+ *  lying between regions are unlikely to be selected by the user
+ */
 {
-    const int xbnd = (a[0] < 0) || (a[0] > dose->px_dimensions[0]);
-    const int ybnd = (a[1] < 0) || (a[1] > dose->px_dimensions[2]);
+    const int xbnd = (a[0] < 0) || (a[0] >= (dose->px_dimensions[0] - 1));
+    const int ybnd = (a[1] < 0) || (a[1] >= (dose->px_dimensions[2] - 1));
     return xbnd || ybnd;
 }
 
