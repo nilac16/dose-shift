@@ -16,6 +16,9 @@ class PlotWindow : public wxFrame {
 
     wxPen dashpen, dosepen;
 
+    void draw_measurements(wxGraphicsContext *gc, const wxPoint2DDouble &porigin,
+                           const wxPoint2DDouble &pwidth);
+                           
     void draw_line_dose(wxGraphicsContext *gc, const wxPoint2DDouble &porigin,
                         const wxPoint2DDouble &pwidth);
 

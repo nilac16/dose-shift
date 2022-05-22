@@ -20,11 +20,13 @@ class MainApplication : public wxApp {
     void initialize_main_window();
 
     void on_dicom_load(wxFileDirPickerEvent &e);
+    void on_depth_change(wxCommandEvent &e);
     void on_plot_change(wxCommandEvent &e);
     void on_plot_open(wxCommandEvent &e);
 
 public:
     float get_depth() const;
+    void set_max_depth();
 
     bool detector_enabled() const;
     void get_detector_affine(double affine[]) const noexcept;
@@ -41,6 +43,8 @@ public:
     double get_max_dose() const noexcept;
 
     void unload_dose() noexcept;
+
+    void get_measurements(std::vector<std::pair<double, double>> &meas) const;
 
     virtual bool OnInit() override;
 };

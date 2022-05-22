@@ -31,6 +31,8 @@ public:
     void get_line_dose(double *x, double *y) const noexcept;
     void set_line_dose(double x, double y);
 
+    void get_measurements(std::vector<std::pair<double, double>> &meas) const;
+
     bool detector_enabled() const;
 };
 

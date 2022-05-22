@@ -23,10 +23,10 @@ void MainApplication::initialize_main_window()
     pwnd = new PlotWindow(frame);
 
     lwnd->Bind(wxEVT_FILEPICKER_CHANGED, &MainApplication::on_dicom_load, this);
-    cwnd->Bind(EVT_DEPTH_CONTROL, &DoseWindow::on_depth_changed, canv);
+    cwnd->Bind(EVT_DEPTH_CONTROL, &MainApplication::on_depth_change, this);
     cwnd->Bind(EVT_PLOT_CONTROL, &MainApplication::on_plot_change, this);
     cwnd->Bind(EVT_SHIFT_CONTROL, &DoseWindow::on_shift_changed, canv);
-    cwnd->Bind(wxEVT_BUTTON, &MainApplication::on_plot_open, this);
+    cwnd->Bind(EVT_PLOT_OPEN, &MainApplication::on_plot_open, this);
 }
 
 void MainApplication::on_dicom_load(wxFileDirPickerEvent &e)
@@ -34,8 +34,15 @@ void MainApplication::on_dicom_load(wxFileDirPickerEvent &e)
     wxString str = e.GetPath();
     canv->load_file(str.c_str());
     if (canv->dose_loaded()) {
-        cwnd->set_max_depth(canv->get_max_depth());
         pwnd->new_dose_loaded();
+    }
+}
+
+void MainApplication::on_depth_change(wxCommandEvent &e)
+{
+    if (canv->dose_loaded()) {
+        canv->on_depth_changed(e);
+        pwnd->redraw();
     }
 }
 
@@ -60,6 +67,11 @@ void MainApplication::on_plot_open(wxCommandEvent &WXUNUSED(e))
 float MainApplication::get_depth() const
 {
     return cwnd->get_depth();
+}
+
+void MainApplication::set_max_depth()
+{
+    cwnd->set_max_depth(canv->get_max_depth());
 }
 
 bool MainApplication::detector_enabled() const
@@ -110,6 +122,11 @@ double MainApplication::get_max_dose() const noexcept
 void MainApplication::unload_dose() noexcept
 {
     canv->unload_dose();
+}
+
+void MainApplication::get_measurements(std::vector<std::pair<double, double>> &meas) const
+{
+    cwnd->get_measurements(meas);
 }
 
 bool MainApplication::OnInit()

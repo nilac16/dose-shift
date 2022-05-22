@@ -33,6 +33,9 @@ double proton_dose_max_depth(const ProtonDose *dose);
 float proton_dose_coronal_aspect(const ProtonDose *dose);
 
 
+/** TODO: Add colormap to the image structure? This would make it easier 
+ *  to swap them at runtime */
+
 typedef struct _proton_image/* {
     long dim[2];
     long bufwidth;

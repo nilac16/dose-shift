@@ -55,6 +55,11 @@ void CtrlWindow::set_line_dose(double x, double y)
     return pcon->set_point(x, y);
 }
 
+void CtrlWindow::get_measurements(std::vector<std::pair<double, double>> &meas) const
+{
+    pcon->get_measurements(meas);
+}
+
 bool CtrlWindow::detector_enabled() const
 {
     return scon->detector_enabled();

@@ -18,6 +18,28 @@
 #define MIN_YTICKS      5
 
 
+void PlotWindow::draw_measurements(wxGraphicsContext *gc, const wxPoint2DDouble &porigin,
+                                   const wxPoint2DDouble &pwidth)
+{
+    const double dosescale = pwidth.m_y / yticks.back();
+    const double depthscale = pwidth.m_x / static_cast<double>(xticks.back().second);
+    std::vector<std::pair<double, double>> measurements;
+    wxGetApp().get_measurements(measurements);
+    gc->SetPen(*wxBLACK_PEN);
+    if (measurements.empty()) {
+        const double depth = wxGetApp().get_depth();
+        const double x = std::fma(depth, depthscale, porigin.m_x);
+        const double y = std::fma(proton_line_get_dose(line, depth), dosescale, porigin.m_y);
+        gc->StrokeLine(x, porigin.m_y, x, y);
+    } else {
+        for (const std::pair<double, double> &meas : measurements) {
+            const double x = std::fma(meas.first, depthscale, porigin.m_x);
+            const double y = std::fma(meas.second, dosescale, porigin.m_y);
+            gc->DrawRectangle(x - 1.0, y - 1.0, 2.0, 2.0);
+        }
+    }
+}
+
 void PlotWindow::draw_line_dose(wxGraphicsContext *gc, const wxPoint2DDouble &porigin,
                                 const wxPoint2DDouble &pwidth)
 {
@@ -148,6 +170,7 @@ void PlotWindow::draw_plot(wxGraphicsContext *gc)
     draw_yaxis(gc, porigin, pwidth, tikwidth);
     draw_dashes(gc, porigin, pwidth);
     draw_line_dose(gc, porigin, pwidth);
+    draw_measurements(gc, porigin, pwidth);
 }
 
 template <typename HDC>

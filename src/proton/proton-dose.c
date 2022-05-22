@@ -329,7 +329,9 @@ static void proton_dose_find_scan(const ProtonDose *dose, float *z,
 
 /** REWRITEME: Interpolate lines, then cells. Line function returns the 
  *  next line on the image, cell function returns the next cell location. 
- *  The only arithmetic that should be done in the loop is int addition */
+ *  The only arithmetic that should be done in the loop is int addition
+ * 
+ *  (Damn computers are fast) */
 void proton_dose_get_plane(const ProtonDose *dose,
                            ProtonImage *img, float z,
                            void (*colormap)(float, unsigned char *))
@@ -367,7 +369,7 @@ ProtonLine *proton_line_create(const ProtonDose *dose, double depth)
     const long N = STATIC_CAST(long, ceil(depth / dose->px_spacing[1])) + 1;
     ProtonLine *line = calloc(1, sizeof *line + sizeof *line->dose * N);
     if (line) {
-        line->depth = depth;
+        line->depth = STATIC_CAST(double, N) * dose->px_spacing[1];
         line->npts = N;
     }
     return line;

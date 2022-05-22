@@ -1,7 +1,7 @@
-add_library(proton proton-dose.c dcmload.cc)
+add_library(proton proton-dose.c dcmload.cc mcc-data.c)
 
-add_subdirectory(mcc)
+add_subdirectory(delaunay)
 
 target_link_libraries(proton
-    PUBLIC mcc
+    PUBLIC delaunay
     PRIVATE ${DCMTK_LIBRARIES})

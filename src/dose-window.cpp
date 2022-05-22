@@ -225,6 +225,7 @@ void DoseWindow::load_file(const char *filename)
     proton_dose_destroy(dose);
     dose = proton_dose_create(filename);
     if (dose) {
+        wxGetApp().set_max_depth();
         image_realloc_and_write(this->GetSize());
         affine_write();
         conv_write();
@@ -237,10 +238,8 @@ void DoseWindow::load_file(const char *filename)
 
 void DoseWindow::on_depth_changed(wxCommandEvent &WXUNUSED(e))
 {
-    if (dose_loaded()) {
-        image_write();
-        this->Refresh();
-    }
+    image_write();
+    this->Refresh();
 }
 
 void DoseWindow::on_plot_changed(wxCommandEvent &WXUNUSED(e))

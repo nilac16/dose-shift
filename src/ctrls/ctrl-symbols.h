@@ -15,6 +15,7 @@
 #define PLOT_XLABEL     wxT("x (mm)")
 #define PLOT_YLABEL     wxT("y (mm)")
 #define PLOT_ZERO       wxT("0.00")
+#define PLOT_OPENLBL    wxT("Open plot window")
 
 #define DETECTOR_SHOW   wxT("Show detector window")
 #define DETECTOR_RESET  wxT("Reset")

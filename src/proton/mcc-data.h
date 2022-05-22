@@ -8,19 +8,21 @@ extern "C" {
 #endif
 
 
-typedef struct _mcc_data/*  {
-    struct mcc_triangulation *triangulation;
-    unsigned long nscans;
-    struct {
-        double scanpos;
-        unsigned long scanlen;
-        struct {
-            double pos, dose;
-        } data[];
-    } *scans[];
-}  */MCCData;
+enum {
+    MCC_ERROR_NONE = 0,
+    MCC_ERROR_NOMEM,
+    MCC_ERROR_FOPEN_FAILED,
+    MCC_ERROR_MALFORMED_FILE,
+    MCC_ERROR_MISMATCHED_DELIM,
+    MCC_ERROR_MISSING_ATTRIBUTE,
+    MCC_ERROR_MALFORMED_ATTRIBUTE,
+    MCC_ERROR_UNCLASSIFIABLE_STATEMENT,
+    MCC_ERROR_TRIANGULATION_FAILED
+};
 
-MCCData *mcc_data_create(const char *filename);
+typedef struct _mcc_data MCCData;
+
+MCCData *mcc_data_create(const char *filename, int *stat);
 void mcc_data_destroy(MCCData *mcc);
 
 double mcc_data_get_dose(const MCCData *mcc, double x, double y);
