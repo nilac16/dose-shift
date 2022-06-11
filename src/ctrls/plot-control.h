@@ -6,6 +6,7 @@
 #include <array>
 #include <vector>
 #include <wx/wx.h>
+/* #include <wx/spinctrl.h> */
 #include "../proton/mcc-data.h"
 
 wxDECLARE_EVENT(EVT_PLOT_CONTROL, wxCommandEvent);

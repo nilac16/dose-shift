@@ -25,7 +25,7 @@ void MainApplication::initialize_main_window()
     lwnd->Bind(wxEVT_FILEPICKER_CHANGED, &MainApplication::on_dicom_load, this);
     cwnd->Bind(EVT_DEPTH_CONTROL, &MainApplication::on_depth_change, this);
     cwnd->Bind(EVT_PLOT_CONTROL, &MainApplication::on_plot_change, this);
-    cwnd->Bind(EVT_SHIFT_CONTROL, &DoseWindow::on_shift_changed, canv);
+    cwnd->Bind(EVT_SHIFT_CONTROL, &MainApplication::on_shift_change, this);
     cwnd->Bind(EVT_PLOT_OPEN, &MainApplication::on_plot_open, this);
 }
 
@@ -51,6 +51,14 @@ void MainApplication::on_plot_change(wxCommandEvent &e)
     if (canv->dose_loaded()) {
         canv->on_plot_changed(e);
         pwnd->write_line_dose();
+        pwnd->redraw();
+    }
+}
+
+void MainApplication::on_shift_change(wxCommandEvent &e)
+{
+    if (canv->dose_loaded()) {
+        canv->on_shift_changed(e);
         pwnd->redraw();
     }
 }
@@ -127,6 +135,16 @@ void MainApplication::unload_dose() noexcept
 void MainApplication::get_measurements(std::vector<std::pair<double, double>> &meas) const
 {
     cwnd->get_measurements(meas);
+}
+
+wxString MainApplication::get_RS_directory() const
+{
+    return lwnd->get_directory();
+}
+
+void MainApplication::convert_coordinates(double *x, double *y) const noexcept
+{
+    return cwnd->convert_coordinates(x, y);
 }
 
 bool MainApplication::OnInit()

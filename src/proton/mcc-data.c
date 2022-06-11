@@ -6,7 +6,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include "mcc-data.h"
-#include "delaunay/delaunay.h"
 
 #if _MSC_VER
 #   define _q(qualifiers)
@@ -14,16 +13,89 @@
 #   define _q(qualifiers) qualifiers
 #endif
 
-#define INITCAP 1024
+#define INIT_SCANCAP 64
+#define INIT_DATACAP 128
 #define LINEBUFSZ 512
 
 
+#include <errno.h>
+
+const char *mcc_get_error(int err)
+{
+    static const char *errstrings[] = {
+        NULL,
+        "Allocation failure (ENOMEM: Out of memory)",
+        "File failed to open (ENOENT: No such file or directory)",
+        "Mismatched delimiter sequence",
+        "Scan is missing OFFAXIS_INPLANE attribute",
+        "Missing cross calibration",
+        "Attribute value is malformed/cannot be parsed",
+        "Unclassifiable statement",
+    };
+    static const int nstrings = sizeof errstrings / sizeof *errstrings;
+    if ((err > 0) && (err < nstrings)) {
+        return errstrings[err];
+    } else {
+        return NULL;
+    }
+}
+
 struct _mcc_data {
-    struct delaunay_triangle_pool *triangulation;
-    struct delauany_r_tree *rtree;
-    unsigned long size;
-    double nodes[];
+    unsigned int sz, _cap;
+    struct mcc_scan {
+        unsigned int sz, _cap;
+        double y;
+        struct {
+            double x, dose;
+        } data[];
+    } *scans[];
 };
+
+static struct mcc_scan *mcc_scan_alloc(double y, unsigned initsz, jmp_buf env)
+{
+    struct mcc_scan *scan = malloc(sizeof *scan + sizeof *scan->data * initsz);
+    if (scan) {
+        scan->sz = 0;
+        scan->_cap = initsz;
+        scan->y = y;
+    } else {
+        longjmp(env, MCC_ERROR_NOMEM);
+    }
+    return scan;
+}
+
+static void mcc_scan_push_back(struct mcc_scan **scan, double x, double dose, jmp_buf env)
+{
+    if ((*scan)->sz == (*scan)->_cap) {
+        const unsigned newcap = (*scan)->_cap * 2;
+        void *newptr = realloc(*scan, sizeof **scan + sizeof *(*scan)->data * newcap);
+        if (newptr) {
+            *scan = newptr;
+            (*scan)->_cap = newcap;
+        } else {
+            longjmp(env, MCC_ERROR_NOMEM);
+        }
+    }
+    (*scan)->data[(*scan)->sz].x = x;
+    (*scan)->data[(*scan)->sz].dose = dose;
+    (*scan)->sz++;
+}
+
+static void mcc_data_push_scan(MCCData **data, double y, jmp_buf env)
+{
+    if ((*data)->sz == (*data)->_cap) {
+        const unsigned int newcap = (*data)->_cap * 2;
+        void *newptr = realloc(*data, sizeof **data + sizeof *(*data)->scans);
+        if (newptr) {
+            *data = newptr;
+            (*data)->_cap = newcap;
+        } else {
+            longjmp(env, MCC_ERROR_NOMEM);
+        }
+    }
+    (*data)->scans[(*data)->sz] = mcc_scan_alloc(y, INIT_DATACAP, env);
+    (*data)->sz++;
+}
 
 struct mcc_stmt {
     enum {
@@ -191,7 +263,8 @@ static void mcc_data_classify_statement(char *s, struct mcc_stmt *stmt)
  *  scope, clears the cal and pos flags.
  * 
  *  longjmp if: bad delimiter; missing calibration/offaxis position */
-static void mcc_data_scope_check(struct mcc_parse_context *ctx, jmp_buf env)
+static void mcc_data_scope_check(struct mcc_parse_context *ctx, MCCData **data,
+                                 jmp_buf env)
 /** Valid combinations:
  *    - SCOPE_OUT_OF_FILE:             (0000 0000)   (0x00)
  *          FILEOPEN    ->  scope++     0000 0100     0x04  [++]
@@ -211,8 +284,14 @@ static void mcc_data_scope_check(struct mcc_parse_context *ctx, jmp_buf env)
     const uint8_t combin = ((uint8_t)(ctx->scope) << 4) | (uint8_t)ctx->stmt.u.delim;
     switch (combin) {
     case 0x21:
-        if (!ctx->offaxis_fnd || !ctx->crosscal_fnd) {
-            longjmp(env, MCC_ERROR_MISSING_ATTRIBUTE);
+        if (ctx->offaxis_fnd && ctx->crosscal_fnd) {
+            /* Push a new scan onto the scanvector */
+            mcc_data_push_scan(data, ctx->offaxis, env);
+        } else {
+            int err = (ctx->offaxis_fnd)
+                ? MCC_ERROR_MISSING_CROSSCAL
+                : MCC_ERROR_MISSING_OFFAXIS;
+            longjmp(env, err);
         }
     case 0x04:
     case 0x10:
@@ -261,26 +340,13 @@ static void mcc_data_keyval_check(struct mcc_parse_context *ctx, jmp_buf env)
 }
 
 static void mcc_data_data_check(const struct mcc_parse_context *ctx,
-                                MCCData **data, unsigned long *capacity,
-                                jmp_buf env)
+                                struct mcc_scan **scan, jmp_buf env)
 {
-    unsigned long i = (*data)->size;
-    const double dose = ctx->stmt.u.data.dose * ctx->crosscal;
-    if (i == *capacity) {
-        unsigned long newcap = *capacity * 2;
-        void *newptr = realloc(*data, sizeof **data + sizeof *(*data)->nodes * 3UL * newcap);
-        if (newptr) {
-            *data = newptr;
-            *capacity = newcap;
-        } else {
-            longjmp(env, MCC_ERROR_NOMEM);
-        }
-    }
-    i *= 3;
-    (*data)->nodes[i] = ctx->stmt.u.data.pos;
-    (*data)->nodes[i + 1] = ctx->offaxis;
-    (*data)->nodes[i + 2] = dose;
-    (*data)->size++;
+    /* The cross cal appears to be applied to the data already. I will 
+    continue to check that it is there */
+    /* const double dose = ctx->stmt.u.data.dose * ctx->crosscal; */
+    const double dose = ctx->stmt.u.data.dose;
+    mcc_scan_push_back(scan, ctx->stmt.u.data.pos, dose, env);
 }
 
 /** DELETEME: */
@@ -301,8 +367,7 @@ static void mcc_data_data_check(const struct mcc_parse_context *ctx,
     }
 } */
 
-static void mcc_data_load_nodes(FILE *mcc, MCCData **data,
-                                unsigned long *capacity, jmp_buf env)
+static void mcc_data_load_nodes(FILE *mcc, MCCData **data, jmp_buf env)
 {
     struct mcc_parse_context ctx = {
         .scope = SCOPE_OUT_OF_FILE,
@@ -315,13 +380,13 @@ static void mcc_data_load_nodes(FILE *mcc, MCCData **data,
         //PRINT_STATEMENT(&ctx.stmt);
         switch (ctx.stmt.type) {
         case MCC_STMT_DELIM:
-            mcc_data_scope_check(&ctx, env);
+            mcc_data_scope_check(&ctx, data, env);
             break;
         case MCC_STMT_KEYVAL:
             mcc_data_keyval_check(&ctx, env);
             break;
         case MCC_STMT_DATA:
-            mcc_data_data_check(&ctx, data, capacity, env);
+            mcc_data_data_check(&ctx, (*data)->scans + (*data)->sz - 1, env);
             break;
         /* case MCC_STMT_INVALID: */
         default:
@@ -330,32 +395,88 @@ static void mcc_data_load_nodes(FILE *mcc, MCCData **data,
     }
 }
 
+static struct mcc_scan *mcc_scan_trim(struct mcc_scan *scan, jmp_buf env)
+{
+    void *newptr = realloc(scan, sizeof *scan + sizeof *scan->data * scan->sz);
+    if (newptr) {
+        scan = newptr;
+        scan->_cap = scan->sz;
+    } else {
+        /* realloc() can fail in certain circumstances (machine, debug mode,
+        OS, etc...) */
+        longjmp(env, MCC_ERROR_NOMEM);
+    }
+    return scan;
+}
+
+static MCCData *mcc_data_trim(MCCData *data, jmp_buf env)
+{
+    void *newptr;
+    unsigned i;
+    for (i = 0; i < data->sz; i++) {
+        data->scans[i] = mcc_scan_trim(data->scans[i], env);
+    }
+    newptr = realloc(data, sizeof *data + sizeof *data->scans * data->sz);
+    if (newptr) {
+        data = newptr;
+        data->_cap = data->sz;
+    } else {
+        longjmp(env, MCC_ERROR_NOMEM);
+    }
+    return data;
+}
+
+static int mcc_data_scancmp(const struct mcc_scan **s1, const struct mcc_scan **s2)
+{
+    const double y1 = (*s1)->y, y2 = (*s2)->y;
+    return (y1 > y2) - (y1 < y2);
+}
+
+static int mcc_data_datacmp(const double *x1, const double *x2)
+{
+    return (*x1 > *x2) - (*x1 < *x2);
+}
+
+static void mcc_data_sort(MCCData *data)
+{
+    unsigned i;
+    qsort(data->scans, data->sz, sizeof *data->scans,
+          (__compar_fn_t)mcc_data_scancmp);
+    for (i = 0; i < data->sz; i++) {
+        qsort(data->scans[i]->data, data->scans[i]->sz,
+              sizeof *data->scans[i]->data,
+              (__compar_fn_t)mcc_data_datacmp);
+    }
+}
+
 static MCCData *mcc_data_alloc(FILE *mcc, int *stat)
 {
-    unsigned long capacity = INITCAP;
-    MCCData *data = malloc(sizeof *data + sizeof *data->nodes * 3UL * capacity);
+    MCCData *volatile data = calloc(1UL, sizeof *data + sizeof *data->scans * INIT_SCANCAP);
     jmp_buf env;
-    if (data) {
-        data->triangulation = NULL;
-        data->size = 0;
-    } else {
+    if (!data) {
+        *stat = MCC_ERROR_NOMEM;
         return NULL;
     }
+    data->_cap = INIT_SCANCAP;
     if ((*stat = setjmp(env))) {
         free(data);
         return NULL;
     }
-    mcc_data_load_nodes(mcc, (MCCData **)&data, &capacity, env);
-    /** Oh shit, realloc() down is not actually guaranteed, check this */
-    return realloc(data, sizeof *data + sizeof *data->nodes * 3UL * data->size);
+    mcc_data_load_nodes(mcc, (MCCData **)&data, env);
+    data = mcc_data_trim(data, env);
+    mcc_data_sort(data);
+    return data;
 }
 
-/* static void PRINT_DATA(const MCCData *data)
+/* static void MCC_TESTPRINT(const MCCData *data)
 {
     unsigned i;
-    for (i = 0; i < 3UL * data->size; i += 3) {
-        printf(" Node: (% .2f, % .2f; % .3f Gy)\n",
-            data->nodes[i], data->nodes[i + 1], data->nodes[i + 2]);
+    for (i = 0; i < data->sz; i++) {
+        unsigned j;
+        printf("Scan at % .1f\n", data->scans[i]->y);
+        for (j = 0; j < data->scans[i]->sz; j++) {
+            printf("  (% .1f, %.2f Gy)\n", data->scans[i]->data[j].x, data->scans[i]->data[j].dose);
+        }
     }
 } */
 
@@ -365,16 +486,9 @@ MCCData *mcc_data_create(const char *filename, int *stat)
     FILE *mfile = fopen(filename, "r");
     if (mfile) {
         data = mcc_data_alloc(mfile, stat);
-        if (data) {
-            data->triangulation = triangulate(data->size, data->nodes);
-            if (data->triangulation) {
-                *stat = MCC_ERROR_NONE;
-            } else {
-                *stat = MCC_ERROR_TRIANGULATION_FAILED;
-                free(data);
-                return NULL;
-            }
-        }
+        /* if (data) {
+            MCC_TESTPRINT(data);
+        } */
     } else {
         *stat = MCC_ERROR_FOPEN_FAILED;
     }
@@ -384,47 +498,107 @@ MCCData *mcc_data_create(const char *filename, int *stat)
 
 void mcc_data_destroy(MCCData *data)
 {
+    unsigned i;
     if (data) {
-        free_triangle_pool(data->triangulation);
+        for (i = 0; i < data->sz; i++) {
+            free(data->scans[i]);
+        }
         free(data);
     }
 }
 
-static int mcc_data_hit_test(const struct delaunay_triangle *t,
-                             const double x, const double y, double *out)
+/** Returns the index of the scan with the LARGEST ordinate NOT GREATER 
+ *  than y */
+static int mcc_data_scan_bsearch(const MCCData *data, const double y)
 {
-    const double ra[2] = { t->vertices[0][0] - x, t->vertices[0][1] - y };
-    const double rb[2] = { t->vertices[1][0] - x, t->vertices[1][1] - y };
-    const double rc[2] = { t->vertices[2][0] - x, t->vertices[2][1] - y };
-    const double A = 0.5 * (rb[0] * rc[1] - rb[1] * rc[0]);
-    const double B = 0.5 * (rc[0] * ra[1] - rc[1] * ra[0]);
-    const double C = 0.5 * (ra[0] * rb[1] - ra[1] * rb[0]);
-    if ((A < 0.0) || (B < 0.0) || (C < 0.0)) {
-        return 0;
+    int l = 0, r = data->sz;
+    while (l < r) {
+        const int med = (r + l) / 2;
+        const double y0 = data->scans[med]->y;
+        if (y < y0) {
+            r = med;
+        } else if (y0 < y) {
+            l = med + 1;
+        } else {
+            return med;
+        }
+    }
+    return l - 1;
+}
+
+static int mcc_data_data_bsearch(const struct mcc_scan *scan, const double x)
+{
+    int l = 0, r = scan->sz;
+    while (l < r) {
+        const int med = (r + l) / 2;
+        const double x0 = scan->data[med].x;
+        if (x < x0) {
+            r = med;
+        } else if (x0 < x) {
+            l = med + 1;
+        } else {
+            return med;
+        }
+    }
+    return l - 1;
+}
+
+
+/** TODO: If the x value is outside the bounds of either scan, it returns 
+ *  this signal value. Currently, I am returning zero if this happens at 
+ *  all, but the scans have staggered widths and this creates rectangular 
+ *  regions at the edges of the detector where my algorithm will always
+ *  return 0.0, despite dose technically existing there
+ */
+#define SIG_NONCOMPACT -1.0
+
+static double mcc_data_interp_scan(const struct mcc_scan *scan, double x)
+{
+    const int l = mcc_data_data_bsearch(scan, x);
+    const unsigned r = l + 1;
+    if ((l >= 0) && (r < scan->sz)) {
+        const double d0 = scan->data[l].dose;
+        const double m = scan->data[r].dose - d0;
+        const double X = (x - scan->data[l].x) / (scan->data[r].x - scan->data[l].x);
+        return fma(m, X, d0);
     } else {
-        const double ab[2] = { t->vertices[1][0] - t->vertices[0][0], t->vertices[1][1] - t->vertices[0][1] };
-        const double ac[2] = { t->vertices[2][0] - t->vertices[0][0], t->vertices[2][1] - t->vertices[0][1] };
-        const double area = 0.5 * (ab[0] * ac[1] - ab[1] * ac[0]);
-        /* *out = A * t->vertices[0][2] + B * t->vertices[1][2] + C * t->vertices[2][2]; */
-        *out = 0.0;
-        *out = fma(A, t->vertices[0][2], *out);
-        *out = fma(B, t->vertices[1][2], *out);
-        *out = fma(C, t->vertices[2][2], *out);
-        *out /= area;
-        return 1;
+        return SIG_NONCOMPACT;
+    }
+}
+
+static double mcc_data_interp_scans(const struct mcc_scan *scan1,
+                                    const struct mcc_scan *scan2,
+                                    double x, double y)
+{
+    const double interp[2] = {
+        mcc_data_interp_scan(scan1, x),
+        mcc_data_interp_scan(scan2, x)
+    };
+    if ((interp[0] != SIG_NONCOMPACT) && (interp[1] != SIG_NONCOMPACT)) {
+        const double m = interp[1] - interp[0];
+        const double Y = (y - scan1->y) / (scan2->y - scan1->y);
+        return fma(m, Y, interp[0]);
+    } else {
+        return 0.0;
     }
 }
 
 double mcc_data_get_dose(const MCCData *data, double x, double y)
+/** STRATAGEM:
+ *      BILINEAR BABY
+ *      Find the scans bounding above and below
+ *      Interpolate the value at x for both
+ *      Then interpolate the value at y
+ *      
+ *      Do bounds checking like your gamma implementation, assume compact 
+ *      support in both dimensions
+ */
 {
-    const struct delaunay_triangle *t;
-    double out = 0.0;
-    for (t = data->triangulation->start; t < data->triangulation->end; t++) {
-        if (!delaunay_is_manifold_tri(t)) {
-            if (mcc_data_hit_test(t, x, y, &out)) {
-                break;
-            }
-        }
+    const int l = mcc_data_scan_bsearch(data, y);
+    const unsigned r = l + 1;
+    if ((l >= 0) && (r < data->sz)) {
+        return mcc_data_interp_scans(data->scans[l], data->scans[r], x, y);        
+    } else {
+        return 0.0;
     }
-    return out;
 }

@@ -29,10 +29,6 @@ static float cmap_minf(float x, float y)
 }
 
 static float cmap_clamp(float x, const float lbound, const float ubound)
-/** Credit to Jorge on Stack Overflow. This never even occurred to me.
- * 
- *              clamp(x, l, u) = min(max(x, l), u)
- */
 {
     return cmap_minf(cmap_maxf(x, lbound), ubound);
 }

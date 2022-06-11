@@ -252,10 +252,8 @@ void DoseWindow::on_plot_changed(wxCommandEvent &WXUNUSED(e))
 
 void DoseWindow::on_shift_changed(wxCommandEvent &WXUNUSED(e))
 {
-    if (dose_loaded()) {
-        affine_write();
-        this->Refresh();
-    }
+    affine_write();
+    this->Refresh();
 }
 
 float DoseWindow::get_max_depth() const noexcept

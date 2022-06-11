@@ -33,6 +33,9 @@ public:
 
     void get_measurements(std::vector<std::pair<double, double>> &meas) const;
 
+    /** Converts the RS does coordinates to MCC dose coordinates */
+    void convert_coordinates(double *x, double *y) const noexcept;
+
     bool detector_enabled() const;
 };
 

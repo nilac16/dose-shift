@@ -29,10 +29,12 @@ void PlotMeasurement::on_evt_button(wxCommandEvent &WXUNUSED(e))
         mcc_data_destroy(data);
         data = nullptr;
         btn->SetLabelText(wxT("Load"));
+        dctrl->Enable(false);
+        dctrl->ChangeValue(wxEmptyString);
         flbl->SetLabelText(wxEmptyString);
     } else {
-        wxFileDialog dlg(this, wxT("Load an MCC file"), wxEmptyString, wxEmptyString,
-            wxT("MCC files (*.mcc)|*.mcc"));
+        wxFileDialog dlg(this, wxT("Load an MCC file"), wxGetApp().get_RS_directory(),
+            wxEmptyString, wxT("MCC files (*.mcc)|*.mcc"));
         if (dlg.ShowModal() == wxID_CANCEL) {
             return;
         } else {
@@ -42,14 +44,19 @@ void PlotMeasurement::on_evt_button(wxCommandEvent &WXUNUSED(e))
             data = mcc_data_create(result.c_str(), &envno);
             if (data) {
                 btn->SetLabelText(wxT("Remove"));
+                dctrl->Enable(true);
                 flbl->SetLabelText(fname.GetName());
                 depth = wxGetApp().get_depth();
                 entry_write_double(dctrl, depth / 10.0);
             } else {
-                wxPrintf(wxT(" Attempt to create MCC object yielded error code %d\n"), envno);
+                wxString msg;
+                msg.Printf(wxT("Failed to load MCC file: %s"), mcc_get_error(envno));
+                wxMessageBox(msg, wxT("Load failed"), wxICON_ERROR);
+                return;
             }
         }
     }
+    post_change_event();
 }
 
 void PlotMeasurement::on_evt_text(wxCommandEvent &e)
@@ -72,9 +79,9 @@ void PlotMeasurement::on_evt_text(wxCommandEvent &e)
 PlotMeasurement::PlotMeasurement(wxWindow *parent):
     wxPanel(parent),
     btn(new wxButton(this, wxID_ANY, wxT("Load"))),
-    dctrl(new wxTextCtrl(this, wxID_ANY, wxT("0.0"), wxDefaultPosition, ENTRYSZ)),
+    dctrl(new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, ENTRYSZ)),
     flbl(new wxStaticText(this, wxID_ANY, wxEmptyString)),
-    depth(0.0), data(nullptr)
+    data(nullptr)
 {
     wxFloatingPointValidator<double> v;
     wxBoxSizer *hbox = new wxBoxSizer(wxHORIZONTAL);
@@ -85,6 +92,7 @@ PlotMeasurement::PlotMeasurement(wxWindow *parent):
 
     v.SetPrecision(1);
     dctrl->SetValidator(v);
+    dctrl->Enable(false);
 
     btn->Bind(wxEVT_BUTTON, &PlotMeasurement::on_evt_button, this);
     dctrl->Bind(wxEVT_TEXT, &PlotMeasurement::on_evt_text, this);
@@ -182,10 +190,12 @@ void PlotControl::set_point(double x, double y)
 
 void PlotControl::get_measurements(std::vector<std::pair<double, double>> &meas) const
 {
+    double mccx = this->x, mccy = this->y;
+    wxGetApp().convert_coordinates(&mccx, &mccy);
     meas.clear();
     for (const PlotMeasurement *p : measurements) {
         if (p->is_loaded()) {
-            meas.push_back(std::pair(p->get_depth(), p->get_dose(x, y)));
+            meas.push_back(std::pair(p->get_depth(), p->get_dose(mccx, mccy)));
         }
     }
 }

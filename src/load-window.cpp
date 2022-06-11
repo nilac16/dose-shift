@@ -15,3 +15,13 @@ LoadWindow::LoadWindow(wxWindow *parent):
     hbox->AddStretchSpacer();
     this->SetSizer(hbox);
 }
+
+wxString LoadWindow::get_directory() const
+{
+    wxString str = fctrl->GetPath();
+    if (!str.empty()) {
+        wxFileName path(str);
+        str = path.GetPath();
+    }
+    return str;
+}

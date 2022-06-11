@@ -150,6 +150,13 @@ void ShiftControl::set_translation(double x, double y)
     post_change_event();
 }
 
+void ShiftControl::convert_coordinates(double *x, double *y) const noexcept
+{
+    double tmp = *x;
+    *x = cos * tmp - sin * *y - 10.0 * this->x;
+    *y = sin * tmp + cos * *y - 10.0 * this->y;
+}
+
 bool ShiftControl::detector_enabled() const
 {
     return enabld->GetValue();

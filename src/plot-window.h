@@ -14,7 +14,7 @@ class PlotWindow : public wxFrame {
     std::vector<std::pair<double, long>> xticks;
     std::vector<double> yticks;
 
-    wxPen dashpen, dosepen;
+    wxPen dashpen, dosepen, measpen, diffpen;
 
     void draw_measurements(wxGraphicsContext *gc, const wxPoint2DDouble &porigin,
                            const wxPoint2DDouble &pwidth);

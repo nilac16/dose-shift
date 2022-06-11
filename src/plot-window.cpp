@@ -23,19 +23,29 @@ void PlotWindow::draw_measurements(wxGraphicsContext *gc, const wxPoint2DDouble 
 {
     const double dosescale = pwidth.m_y / yticks.back();
     const double depthscale = pwidth.m_x / static_cast<double>(xticks.back().second);
+    const double boxwidth = (pwidth.m_x > pwidth.m_y) ? pwidth.m_x / 60.0 : pwidth.m_y / 60.0;
     std::vector<std::pair<double, double>> measurements;
     wxGetApp().get_measurements(measurements);
-    gc->SetPen(*wxBLACK_PEN);
+    gc->SetPen(measpen);
     if (measurements.empty()) {
         const double depth = wxGetApp().get_depth();
         const double x = std::fma(depth, depthscale, porigin.m_x);
         const double y = std::fma(proton_line_get_dose(line, depth), dosescale, porigin.m_y);
         gc->StrokeLine(x, porigin.m_y, x, y);
     } else {
-        for (const std::pair<double, double> &meas : measurements) {
+        for (std::pair<double, double> &meas : measurements) {
             const double x = std::fma(meas.first, depthscale, porigin.m_x);
             const double y = std::fma(meas.second, dosescale, porigin.m_y);
-            gc->DrawRectangle(x - 1.0, y - 1.0, 2.0, 2.0);
+            gc->DrawRectangle(x - boxwidth / 2, y - boxwidth / 2,
+                boxwidth, boxwidth);
+            meas.second = (meas.second - proton_line_get_dose(line, meas.first)) / proton_line_get_dose(line, meas.first);
+            meas.first = x;
+        }
+        gc->SetPen(diffpen);
+        for (const std::pair<double, double> &meas : measurements) {
+            const double x = meas.first;
+            const double y = porigin.m_y + 0.5 * pwidth.m_y + 10 * pwidth.m_y * meas.second;
+            gc->DrawEllipse(x - boxwidth / 2, y - boxwidth / 2, boxwidth, boxwidth);
         }
     }
 }
@@ -176,7 +186,8 @@ void PlotWindow::draw_plot(wxGraphicsContext *gc)
 template <typename HDC>
 static wxGraphicsContext *get_graphics_context(const HDC &dc)
 {
-/* #if _WIN32
+/* Is it already doing this?
+#if _WIN32
     return wxGraphicsRenderer::GetDirect2DRenderer()->CreateContext(dc);
 #else */
     return wxGraphicsContext::Create(dc);
@@ -263,7 +274,9 @@ PlotWindow::PlotWindow(wxWindow *parent):
     canv(new wxWindow(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxFULL_REPAINT_ON_RESIZE)),
     line(nullptr),
     dashpen(wxColour(200, 200, 200), 1, wxPENSTYLE_DOT),
-    dosepen(wxColour(60, 60, 255), 2, wxPENSTYLE_SOLID)
+    dosepen(wxColour(60, 160, 100), 2, wxPENSTYLE_SOLID),
+    measpen(wxColour(60, 60, 190), 1, wxPENSTYLE_SOLID),
+    diffpen(wxColour(180, 100, 100), 1, wxPENSTYLE_SOLID)
 {
     this->Bind(wxEVT_CLOSE_WINDOW, &PlotWindow::on_evt_close, this);
     canv->Bind(wxEVT_PAINT, &PlotWindow::on_evt_paint, this);

@@ -60,6 +60,11 @@ void CtrlWindow::get_measurements(std::vector<std::pair<double, double>> &meas) 
     pcon->get_measurements(meas);
 }
 
+void CtrlWindow::convert_coordinates(double *x, double *y) const noexcept
+{
+    scon->convert_coordinates(x, y);
+}
+
 bool CtrlWindow::detector_enabled() const
 {
     return scon->detector_enabled();

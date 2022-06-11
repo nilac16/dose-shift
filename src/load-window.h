@@ -12,6 +12,8 @@ class LoadWindow : public wxPanel {
 
 public:
     LoadWindow(wxWindow *parent);
+
+    wxString get_directory() const;
 };
 
 

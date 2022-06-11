@@ -33,6 +33,8 @@ public:
     void get_affine(double affine[]) const noexcept;
     void set_translation(double x, double y);
 
+    void convert_coordinates(double *x, double *y) const noexcept;
+
     bool detector_enabled() const;
 };
 

@@ -22,6 +22,7 @@ class MainApplication : public wxApp {
     void on_dicom_load(wxFileDirPickerEvent &e);
     void on_depth_change(wxCommandEvent &e);
     void on_plot_change(wxCommandEvent &e);
+    void on_shift_change(wxCommandEvent &e);
     void on_plot_open(wxCommandEvent &e);
 
 public:
@@ -45,6 +46,9 @@ public:
     void unload_dose() noexcept;
 
     void get_measurements(std::vector<std::pair<double, double>> &meas) const;
+    wxString get_RS_directory() const;
+
+    void convert_coordinates(double *x, double *y) const noexcept;
 
     virtual bool OnInit() override;
 };
