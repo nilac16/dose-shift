@@ -536,4 +536,5 @@ void PlotWindow::dose_unloaded()
 {
     proton_line_destroy(line);
     line = nullptr;
+    redraw();
 }
