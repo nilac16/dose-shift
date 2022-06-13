@@ -9,6 +9,7 @@
 
 #if _MSC_VER
 #   define _q(qualifiers)
+typedef int (*__compar_fn_t)(const void *, const void *); /* Seriously? */
 #else
 #   define _q(qualifiers) qualifiers
 #endif
@@ -17,8 +18,6 @@
 #define INIT_DATACAP 128
 #define LINEBUFSZ 512
 
-
-#include <errno.h>
 
 const char *mcc_get_error(int err)
 {

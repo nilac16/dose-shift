@@ -8,6 +8,14 @@ extern "C" {
 #endif
 
 
+/** Directions are normal to their respective planes (i.e. sagittal 
+ *  in the x direction) */
+enum {
+    DOSE_LR = 0,    /* Sagittal direction */
+    DOSE_AP = 1,    /* Coronal direction */
+    DOSE_SI = 2     /* Axial direction */
+};
+
 /** Typedef'd because I want to use a C99 flexible array member
  *  I don't want to use the singleton array hack
  */

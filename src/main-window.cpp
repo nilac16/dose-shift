@@ -35,6 +35,13 @@ void MainApplication::on_dicom_load(wxFileDirPickerEvent &e)
     canv->load_file(str.c_str());
     if (canv->dose_loaded()) {
         pwnd->new_dose_loaded();
+    } else {
+        /* What resources must be destroyed if the DICOM is unloaded? 
+        The dose window maintains a resizable pixel buffer, and simply 
+        doesn't draw it if a dose is not loaded
+        The plot window allocates a new line buffer when the dose is 
+        loaded, so that must be destroyed */
+        pwnd->dose_unloaded();
     }
 }
 
