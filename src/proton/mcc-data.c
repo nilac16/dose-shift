@@ -23,8 +23,8 @@ const char *mcc_get_error(int err)
 {
     static const char *errstrings[] = {
         NULL,
-        "Allocation failure (ENOMEM: Out of memory)",
-        "File failed to open (ENOENT: No such file or directory)",
+        "Allocation failure: Out of memory",
+        "File failed to open: No such file or directory",
         "Mismatched delimiter sequence",
         "Scan is missing OFFAXIS_INPLANE attribute",
         "Missing cross calibration",

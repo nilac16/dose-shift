@@ -15,8 +15,8 @@
 #define GRID_OPACITY        0.2
 #define LINEDOSE_OPACITY    0.8
 
-#define MIN_XTICKS      6
-#define MIN_YTICKS      5
+#define MIN_XTICKS      9
+#define MIN_YTICKS      9
 
 #define DEFWINDOWSZ wxSize(640, 480)
 
@@ -26,11 +26,12 @@
  *                      ** originally 1044x720 **
  * 
  *  RESULT: In Excel, the plot boxes appear to have an aspect ratio of 1.13
+ *  ACTUALLY: On the PDF, they have an aspect of ~1.3
  */
-#define IMAGE_RES wxSize(1080, 960)
+#define IMAGE_RES wxSize(1080, 800)
 
 /** PLEASE ALWAYS MAKE THIS THE SQUARE ROOT OF THE OUTPUT IMAGE AREA **/
-constexpr double image_gmean = 1018.2337649086285;
+constexpr double image_gmean = 929.51600308978;
 
 #define IMAGE_AXFONT_SIZE  20
 #define IMAGE_TIKFONT_SIZE 14

@@ -1,4 +1,9 @@
+#include <csignal>
 #include "main-window.h"
+
+#if defined _MSC_VER && _MSC_VER
+typedef _crt_signal_t sighandler_t;
+#endif
 
 #define MAIN_TITLE wxT("QA shift visualizer")
 
@@ -154,8 +159,70 @@ void MainApplication::convert_coordinates(double *x, double *y) const noexcept
     return cwnd->convert_coordinates(x, y);
 }
 
+/** Displays a modal message box informing the user that the application 
+ *  state is irreparably beans'd, then unhooks itself so the OS can have its 
+ *  way with the app
+ * 
+ *  If this ever crashes on Windows, the signal handler will keep the application 
+ *  running until the user switches back to it to see this. I have wondered many 
+ *  times whether I closed the application by accident, or if it silently crashed 
+ *  on the other workspace
+ * 
+ *  Currently trapping (on all platforms):
+ *   - Illegal instructions (I might want to use vector instructions)
+ *   - Segmentation faults
+ *
+ *  Also trapping on POSIX-compliant platforms:
+ *   - Bus error
+ *   - Bad syscall
+ * 
+ *  Not trapping, but including commented-out code:
+ *   - Floating-point exceptions (If I become concerned that they may occur, they 
+ *     can be trapped. I would prefer to avoid them in the code. At worst, the 
+ *     result should simply be unloading the current DICOM and resetting the fpenv)
+ */
+static void main_signal_handler(int sig/*, int fpcode */)
+{
+    static const wxString title(wxT("Signal caught"));
+    wxString message;
+    switch (sig) {
+    case SIGILL:
+        message = wxT("The application has raised a SIGILL (illegal instruction) and must now terminate.");
+        break;
+    /* case SIGFPE:
+        message = wxT("The application has raised a SIGFPE (floating point exception) and must now terminate.");
+        break; */
+    case SIGSEGV:
+        message = wxT("The application has raised a SIGSEGV (segmentation fault) and must now terminate.");
+        break;
+#if !_WIN32
+    case SIGBUS:
+        message = wxT("Bus error");
+        break;
+    case SIGSYS:
+        message = wxT("Bad system call");
+        break;
+#endif
+    }
+    wxMessageBox(message, title, wxICON_ERROR);
+    std::signal(sig, SIG_DFL);
+    std::raise(sig);
+}
+
+static void main_signal_register(void)
+{
+    std::signal(SIGILL, (sighandler_t)main_signal_handler);
+    /* std::signal(SIGFPE, (sighandler_t)main_signal_handler); */
+    std::signal(SIGSEGV, (sighandler_t)main_signal_handler);
+#if !_WIN32
+    std::signal(SIGBUS, (sighandler_t)main_signal_handler);
+    std::signal(SIGSYS, (sighandler_t)main_signal_handler);
+#endif
+}
+
 bool MainApplication::OnInit()
 {
+    main_signal_register();
     try {
         initialize_main_window();
         frame->Show();

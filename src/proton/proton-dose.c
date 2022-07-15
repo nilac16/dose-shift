@@ -359,7 +359,7 @@ void proton_dose_get_plane(const ProtonDose *dose,
 }
 
 struct _proton_line {
-    double depth;
+    double mindepth, maxdepth;
     long npts;
     float dose[];
 };
@@ -369,7 +369,8 @@ ProtonLine *proton_line_create(const ProtonDose *dose, double depth)
     const long N = STATIC_CAST(long, ceil(depth / dose->px_spacing[1])) + 1;
     ProtonLine *line = calloc(1, sizeof *line + sizeof *line->dose * N);
     if (line) {
-        line->depth = STATIC_CAST(double, N) * dose->px_spacing[1];
+        line->mindepth = dose->px_spacing[1] / 2;
+        line->maxdepth = STATIC_CAST(double, N) * dose->px_spacing[1];
         line->npts = N;
     }
     return line;
@@ -392,13 +393,13 @@ const float *proton_line_raw(const ProtonLine *line)
 
 double proton_line_depth(const ProtonLine *line)
 {
-    return line->depth;
+    return line->maxdepth;
 }
 
 double proton_line_get_dose(const ProtonLine *line, double depth)
 {
     long i;
-    depth /= line->depth;
+    depth = (depth - line->mindepth) / line->maxdepth;
     depth *= STATIC_CAST(double, line->npts);
     i = STATIC_CAST(long, floor(depth));
     depth -= floor(depth);

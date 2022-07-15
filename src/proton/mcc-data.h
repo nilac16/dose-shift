@@ -10,15 +10,20 @@ extern "C" {
 
 enum {
     MCC_ERROR_NONE = 0,
-    MCC_ERROR_NOMEM,
-    MCC_ERROR_FOPEN_FAILED,
-    MCC_ERROR_MISMATCHED_DELIM,
-    MCC_ERROR_MISSING_OFFAXIS,
-    MCC_ERROR_MISSING_CROSSCAL,
-    MCC_ERROR_MALFORMED_ATTRIBUTE,
-    MCC_ERROR_UNCLASSIFIABLE_STATEMENT
+
+/** System errors */
+    MCC_ERROR_NOMEM,                    /* Out of memory */
+    MCC_ERROR_FOPEN_FAILED,             /* No such file or directory */
+
+/** File errors */
+    MCC_ERROR_MISMATCHED_DELIM,         /* Mismatched delimiters */
+    MCC_ERROR_MISSING_OFFAXIS,          /* Missing scan coordinate */
+    MCC_ERROR_MISSING_CROSSCAL,         /* Missing cross calibration */
+    MCC_ERROR_MALFORMED_ATTRIBUTE,      /* Parser failure */
+    MCC_ERROR_UNCLASSIFIABLE_STATEMENT  /* Lexer failure */
 };
 
+/** FYI: This returns NULL if err == MCC_ERROR_NONE -- Do NOT puts() this! */
 const char *mcc_get_error(int err);
 
 typedef struct _mcc_data MCCData;
