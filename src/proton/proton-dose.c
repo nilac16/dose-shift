@@ -155,8 +155,8 @@ float proton_dose_max(const ProtonDose *dose)
 
 void proton_dose_depth_range(const ProtonDose *dose, float range[_q(static 2)])
 {
-    range[0] = proton_dose_min_depth(dose);
-    range[1] = proton_dose_max_depth(dose);
+    range[0] = STATIC_CAST(float, proton_dose_min_depth(dose));
+    range[1] = STATIC_CAST(float, proton_dose_max_depth(dose));
 }
 
 float proton_dose_coronal_aspect(const ProtonDose *dose)
@@ -373,7 +373,7 @@ struct _proton_line {
 
 ProtonLine *proton_line_create(const ProtonDose *dose, double depth)
 {
-    const long N = floor((depth - proton_dose_min_depth(dose)) / dose->px_spacing[1]);
+    const long N = STATIC_CAST(long, floor((depth - proton_dose_min_depth(dose)) / dose->px_spacing[1]));
     ProtonLine *line = calloc(1, sizeof *line + sizeof *line->dose * N);
     if (line) {
         line->dref = dose;
