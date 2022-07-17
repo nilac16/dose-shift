@@ -23,7 +23,7 @@ public:
     int get_value() const;
     void set_value(int x);
 
-    void set_max_depth(int depth);
+    void set_depth_range(int low, int high);
     int get_max() const;
 };
 

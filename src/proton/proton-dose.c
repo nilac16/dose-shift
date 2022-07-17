@@ -26,6 +26,7 @@ struct _proton_dose {
     double top_left[3];
     double px_spacing[3];
     long px_dimensions[3];
+    double maxdepth;
     float dmax;
     float data[];
 };
@@ -35,6 +36,47 @@ static ProtonDose *proton_dose_flexible_alloc(const long N)
     ProtonDose *dose;
     dose = malloc(sizeof *dose + sizeof *dose->data * N);
     return dose;
+}
+
+/** This one is nearly free */
+static double proton_dose_min_depth(const ProtonDose *dose)
+{
+    return dose->px_spacing[1] / 2.0;
+}
+
+static int proton_dose_plane_nonzero(const float *dline, const long hskip,
+                                     const long axskip, const long kend)
+{
+    const float *const dlast = dline + axskip * kend;
+    for (; dline != dlast; dline += axskip) {
+        const float *dptr, *const dend = dline + hskip;
+        for (dptr = dline; dptr < dend; dptr++) {
+            if (*dptr > NULL_THRESH) {
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+
+/** Do not use this, its result is stored in the dose struct */
+static double proton_dose_max_depth(const ProtonDose *dose)
+/** Integrate each coronal plane and return the DEPTH of the last plane 
+ *  with nonzero integrated dose */
+{
+    const float *dline = dose->data;
+    const long axskip = dose->px_dimensions[0] * dose->px_dimensions[1];
+    const long jend = dose->px_dimensions[1] - 1;
+    long j, jlast = -1;
+    for (j = 0; j < jend; j++) {
+        const int pnz = proton_dose_plane_nonzero(dline,
+            dose->px_dimensions[0], axskip, dose->px_dimensions[2]);
+        if (pnz) {
+            jlast = j;
+        }
+        dline += dose->px_dimensions[0];
+    }
+    return fma(STATIC_CAST(double, jlast), dose->px_spacing[1], proton_dose_min_depth(dose));
 }
 
 static ProtonDose *proton_dose_init(RTDose *dcm)
@@ -61,6 +103,7 @@ static ProtonDose *proton_dose_init(RTDose *dcm)
         free(dose);
         return NULL;
     }
+    dose->maxdepth = proton_dose_max_depth(dose);
     return dose;
 }
 
@@ -110,44 +153,11 @@ float proton_dose_max(const ProtonDose *dose)
     return dose->dmax;
 }
 
-static int proton_dose_plane_nonzero(const float *dline, const long hskip,
-                                     const long axskip, const long kend)
+void proton_dose_depth_range(const ProtonDose *dose, float range[_q(static 2)])
 {
-    const float *const dlast = dline + axskip * kend;
-    for (; dline != dlast; dline += axskip) {
-        const float *dptr, *const dend = dline + hskip;
-        for (dptr = dline; dptr < dend; dptr++) {
-            if (*dptr > NULL_THRESH) {
-                return 1;
-            }
-        }
-    }
-    return 0;
+    range[0] = proton_dose_min_depth(dose);
+    range[1] = proton_dose_max_depth(dose);
 }
-
-double proton_dose_max_depth(const ProtonDose *dose)
-/** Integrate each coronal plane and return the depth of the last plane 
- *  with nonzero integrated dose */
-{
-    const float *dline = dose->data;
-    const long axskip = dose->px_dimensions[0] * dose->px_dimensions[1];
-    const long jend = dose->px_dimensions[1] - 1;
-    long j, jlast = -1;
-    for (j = 0; j < jend; j++) {
-        const int pnz = proton_dose_plane_nonzero(dline,
-            dose->px_dimensions[0], axskip, dose->px_dimensions[2]);
-        if (pnz) {
-            jlast = j;
-        }
-        dline += dose->px_dimensions[0];
-    }
-    return STATIC_CAST(double, jlast) * dose->px_spacing[1];
-}
-/** The easiest solution is to only allow the second-to-last layer to be 
- *  selected, which absolves the need for any bounds checking at all */
-/* {
-    return STATIC_CAST(double, dose->px_dimensions[1] - 2) * dose->px_spacing[1];
-} */
 
 float proton_dose_coronal_aspect(const ProtonDose *dose)
 {
@@ -172,12 +182,6 @@ static ProtonImage *proton_image_flexible_alloc(long N)
     return img;
 }
 
-static void proton_image_dim_set(ProtonImage *img, long width, long height)
-{
-    img->dim[0] = width;
-    img->dim[1] = height;
-}
-
 int proton_image_realloc(ProtonImage **img, long width, long height)
 {
     const long N = 3UL * width * height;
@@ -189,7 +193,8 @@ int proton_image_realloc(ProtonImage **img, long width, long height)
             return 1;
         }
     }
-    proton_image_dim_set(*img, width, height);
+    (*img)->dim[0] = width;
+    (*img)->dim[1] = height;
     return 0;
 }
 
@@ -315,11 +320,14 @@ static void proton_dose_interpolate_cell(const float interp[_q(static 4)],
     }
 }
 
+/** Given a slice depth in @p z, find the the scan with the greatest z 
+ *  coordinate not greater than @p z */
 static void proton_dose_find_scan(const ProtonDose *dose, float *z,
                                   const float *restrict *dline)
 {
     float flz;
     long idx;
+    *z -= STATIC_CAST(float, proton_dose_min_depth(dose));
     *z /= STATIC_CAST(float, dose->px_spacing[1]);
     flz = floorf(*z);
     idx = STATIC_CAST(long, flz);
@@ -329,11 +337,9 @@ static void proton_dose_find_scan(const ProtonDose *dose, float *z,
 
 /** REWRITEME: Interpolate lines, then cells. Line function returns the 
  *  next line on the image, cell function returns the next cell location. 
- *  The only arithmetic that should be done in the loop is int addition
- * 
- *  (Damn computers are fast) */
+ *  The only arithmetic that should be done in the loop is int addition */
 void proton_dose_get_plane(const ProtonDose *dose,
-                           ProtonImage *img, float z,
+                           ProtonImage *img, float depth,
                            void (*colormap)(float, unsigned char *))
 {
     const long axskip = dose->px_dimensions[0] * dose->px_dimensions[1];
@@ -346,12 +352,12 @@ void proton_dose_get_plane(const ProtonDose *dose,
     if (proton_image_empty(img)) {
         return;
     }
-    proton_dose_find_scan(dose, &z, &dptr);
+    proton_dose_find_scan(dose, &depth, &dptr);
     for (a[1] = 0; a[1] < alim[1]; a[1]++) {
         const float *const dline = dptr;
         for (a[0] = 0; a[0] < alim[0]; a[0]++, dptr++) {
             proton_dose_load_interpolant(interp, dptr, dose->px_dimensions[0],
-                                         axskip, z, dose->dmax);
+                                         axskip, depth, dose->dmax);
             proton_dose_interpolate_cell(interp, a, alim, blim, buf, colormap);
         }
         dptr = dline + axskip;
@@ -359,18 +365,19 @@ void proton_dose_get_plane(const ProtonDose *dose,
 }
 
 struct _proton_line {
-    double mindepth, maxdepth;
+    const ProtonDose *dref;
+    double maxdepth;
     long npts;
     float dose[];
 };
 
 ProtonLine *proton_line_create(const ProtonDose *dose, double depth)
 {
-    const long N = STATIC_CAST(long, ceil(depth / dose->px_spacing[1])) + 1;
+    const long N = floor((depth - proton_dose_min_depth(dose)) / dose->px_spacing[1]);
     ProtonLine *line = calloc(1, sizeof *line + sizeof *line->dose * N);
     if (line) {
-        line->mindepth = dose->px_spacing[1] / 2;
-        line->maxdepth = STATIC_CAST(double, N) * dose->px_spacing[1];
+        line->dref = dose;
+        line->maxdepth = fma(STATIC_CAST(double, N), dose->px_spacing[1], proton_dose_min_depth(dose));
         line->npts = N;
     }
     return line;
@@ -391,18 +398,16 @@ const float *proton_line_raw(const ProtonLine *line)
     return line->dose;
 }
 
-double proton_line_depth(const ProtonLine *line)
-{
-    return line->maxdepth;
-}
-
 double proton_line_get_dose(const ProtonLine *line, double depth)
 {
+    double x;
     long i;
-    depth = (depth - line->mindepth) / line->maxdepth;
+    depth -= proton_dose_min_depth(line->dref);
+    depth /= line->maxdepth - proton_dose_min_depth(line->dref);
     depth *= STATIC_CAST(double, line->npts);
-    i = STATIC_CAST(long, floor(depth));
-    depth -= floor(depth);
+    x = floor(depth);
+    i = STATIC_CAST(long, x);
+    depth -= x;
     return line->dose[i] + (line->dose[i + 1] - line->dose[i]) * depth;
 }
 
@@ -453,9 +458,9 @@ static float proton_dose_interpolate_square(const float *dptr, const long axskip
     return proton_dose_interp_eval(interp, r);
 }
 
-void proton_dose_get_line(const ProtonDose *dose, ProtonLine *line,
-                          double x, double y)
+void proton_dose_get_line(ProtonLine *line, double x, double y)
 {
+    const ProtonDose *dose = line->dref;
     const unsigned long axskip = dose->px_dimensions[0] * dose->px_dimensions[1];
     const float *dptr;
     float *lptr, *const lend = line->dose + line->npts;

@@ -27,7 +27,7 @@ class MainApplication : public wxApp {
 
 public:
     float get_depth() const;
-    void set_max_depth();
+    void set_depth_range();
 
     bool detector_enabled() const;
     void get_detector_affine(double affine[]) const noexcept;

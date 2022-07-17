@@ -69,13 +69,20 @@ int DepthControl::get_value() const
 
 void DepthControl::set_value(int x)
 {
+    wxString str;
     slider->SetValue(x);
-    entry->ChangeValue(wxT("0"));
+    str.Printf(wxT("%d"), x);
+    entry->ChangeValue(str);
 }
 
-void DepthControl::set_max_depth(int depth)
+void DepthControl::set_depth_range(int min, int max)
 {
-    slider->SetMax(depth);
+    int cur = slider->GetValue();
+    cur = std::max(min, cur);
+    cur = std::min(max, cur);
+    slider->SetMin(min);
+    slider->SetMax(max);
+    this->set_value(cur);
 }
 
 int DepthControl::get_max() const

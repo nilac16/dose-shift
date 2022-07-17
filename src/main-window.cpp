@@ -89,9 +89,11 @@ float MainApplication::get_depth() const
     return cwnd->get_depth();
 }
 
-void MainApplication::set_max_depth()
+void MainApplication::set_depth_range()
 {
-    cwnd->set_max_depth(canv->get_max_depth());
+    float range[2];
+    canv->get_depth_range(range);
+    cwnd->set_depth_range(range[0], range[1]);
 }
 
 bool MainApplication::detector_enabled() const

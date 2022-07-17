@@ -21,13 +21,11 @@ float CtrlWindow::get_depth() const
     return static_cast<float>(dcon->get_value());
 }
 
-void CtrlWindow::set_max_depth(int depth)
+void CtrlWindow::set_depth_range(float min, float max)
 {
-    int cur = dcon->get_value();
-    if (cur > depth) {
-        dcon->set_value(0);
-    }
-    dcon->set_max_depth(depth);
+    int l = static_cast<int>(std::ceil(min));
+    int h = static_cast<int>(std::floor(max));
+    dcon->set_depth_range(l, h);
 }
 
 double CtrlWindow::get_max_slider_depth() const

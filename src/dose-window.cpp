@@ -225,7 +225,7 @@ void DoseWindow::load_file(const char *filename)
     proton_dose_destroy(dose);
     dose = proton_dose_create(filename);
     if (dose) {
-        wxGetApp().set_max_depth();
+        wxGetApp().set_depth_range();
         image_realloc_and_write(this->GetSize());
         affine_write();
         conv_write();
@@ -256,9 +256,9 @@ void DoseWindow::on_shift_changed(wxCommandEvent &WXUNUSED(e))
     this->Refresh();
 }
 
-float DoseWindow::get_max_depth() const noexcept
+void DoseWindow::get_depth_range(float range[]) const noexcept
 {
-    return proton_dose_max_depth(dose);
+    proton_dose_depth_range(dose, range);
 }
 
 const ProtonDose *DoseWindow::get_dose() const noexcept

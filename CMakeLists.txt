@@ -25,7 +25,7 @@ else ()
         set(USER_C_FLAGS "-O2 -Wall -Wextra")
     endif ()
     set(USER_CXX_FLAGS "${USER_CXX_FLAGS} -mfma -mavx2")
-    set(USER_C_FLAGS "${USER_C_FLAGS} -mfma -mavx2")
+    set(USER_C_FLAGS "${USER_C_FLAGS} -mfma -mavx2 -Werror=implicit-function-declaration -Wno-implicit-fallthrough")
 endif ()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${USER_CXX_FLAGS}")
