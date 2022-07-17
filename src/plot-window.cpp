@@ -92,6 +92,7 @@ void PlotWindow::draw_measurements(wxGraphicsContext *gc, struct plot_context *c
 {
     const double dosescale = ctx->width.m_y / yticks.back();
     const double depthscale = ctx->width.m_x / static_cast<double>(xticks.back().second);
+    const double depthorig = std::fma(depthscale, 0.5, ctx->origin.m_x);
     gc->SetPen(measpen);
     if (ctx->measurements.empty()) {
         /* Draw a line at the currently drawn depth */
@@ -128,16 +129,17 @@ void PlotWindow::draw_line_dose(wxGraphicsContext *gc, const struct plot_context
 {
     const double dosescale = ctx->width.m_y / yticks.back();
     const double depthscale = ctx->width.m_x * proton_dose_spacing(wxGetApp().get_dose(), 1) / static_cast<double>(xticks.back().second);
+    const double depthorig = std::fma(depthscale, 0.5, ctx->origin.m_x);
     const float *ld = proton_line_raw(line);
     wxGraphicsPath p = gc->CreatePath();
     long i;
     gc->SetPen(dosepen);
-    p.MoveToPoint(ctx->origin.m_x, std::fma(static_cast<double>(*ld), dosescale, ctx->origin.m_y));
+    p.MoveToPoint(depthorig, std::fma(static_cast<double>(*ld), dosescale, ctx->origin.m_y));
     ld++;
     for (i = 1; i < proton_line_length(line); i++, ld++) {
         const double dose = static_cast<double>(*ld);
         p.AddLineToPoint(
-            std::fma(static_cast<double>(i), depthscale, ctx->origin.m_x),
+            std::fma(static_cast<double>(i), depthscale, depthorig),
             std::fma(dose, dosescale, ctx->origin.m_y));
     }
     gc->StrokePath(p);
@@ -413,6 +415,9 @@ void PlotWindow::on_context_menu(wxContextMenuEvent &e)
     e.Skip();
 }
 
+/** Computes the maximum plottable depth as either DEPTHMAX_MULT multiplied 
+ *  by the maximum value of the depth slider, or the maximum physical depth 
+ *  of the dose volume, whichever is smaller */
 static double plot_window_compute_max_depth()
 {
     const double max_actual = std::floor(proton_dose_width(wxGetApp().get_dose(), DOSE_AP) - 1);
@@ -511,7 +516,7 @@ void PlotWindow::write_line_dose()
 {
     double x, y;
     wxGetApp().get_line_dose(&x, &y);
-    proton_dose_get_line(wxGetApp().get_dose(), line, x, y);
+    proton_dose_get_line(line, x, y);
     redraw();
 }
 

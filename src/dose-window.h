@@ -44,7 +44,7 @@ public:
     void on_plot_changed(wxCommandEvent &e);
     void on_shift_changed(wxCommandEvent &e);
 
-    float get_max_depth() const noexcept;
+    void get_depth_range(float range[/* static 2 */]) const noexcept;
 
     const ProtonDose *get_dose() const noexcept;
     void unload_dose() noexcept;

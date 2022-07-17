@@ -19,9 +19,8 @@ public:
 
     float get_depth() const;
 
-    /** Also changes the current depth to zero if it is greater than the 
-     *  passed value */
-    void set_max_depth(int depth);
+    /** Sets the valid integer slider depths to [ceil(min), floor(max)] */
+    void set_depth_range(float min, float max);
     double get_max_slider_depth() const;
 
     void get_detector_affine(double affine[]) const noexcept;

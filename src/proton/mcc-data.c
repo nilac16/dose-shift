@@ -167,7 +167,7 @@ static void strtok_ws(const char **s, const char **endptr)
 
 /** Compares the range [s1, s2) to the C string at sptr, returning one if 
  *  and only if they are equivalent within the range. The string pointed to 
- *  by sptr must contain a nul terminator at the end of the range */
+ *  by sptr must contain a nul terminator by the end of the range */
 static int strcmprng(const char *s1, const char *const s2, const char *sptr)
 {
     while ((s1 < s2) && *sptr) {
