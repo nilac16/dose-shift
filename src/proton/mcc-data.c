@@ -146,7 +146,13 @@ static const char *delims[] = {
 
 
 /** Reimplementation of strtok that delimits on all whitespace, as 
- *  determined by isspace(3) */
+ *  determined by isspace(3)
+ *  If @p s is at end-of-string, BOTH @p s and @p endptr are set to NULL!
+ *  \param s      Pointer to pointer to start of string. Set to NULL at 
+ *      end of string ONLY
+ *  \param endptr Pointer to char * that will be set to the end of the 
+ *      token. Set to NULL at end of string ONLY
+ */
 static void strtok_ws(const char **s, const char **endptr)
 {
     const char *tok = *s;
@@ -219,12 +225,18 @@ static int mcc_data_classify_data(const char *s, struct mcc_stmt *stmt)
     const char *s1 = s, *s2;
     char *endptr;
     strtok_ws(&s1, &s2);
+    if (!s1) {
+        return 0;
+    }
     stmt->u.data.pos = strtod(s1, &endptr);
     if (s2 != endptr) {
         return 0;
     }
     s1 = s2;
     strtok_ws(&s1, &s2);
+    if (!s1) {
+        return 0;
+    }
     stmt->u.data.dose = strtod(s1, &endptr);
     return s2 == endptr;
 }
@@ -234,10 +246,12 @@ static int mcc_data_classify_delim(const char *s, struct mcc_stmt *stmt)
     const char *s1 = s, *s2;
     unsigned i;
     strtok_ws(&s1, &s2);
-    for (i = 0; i < sizeof delims / sizeof *delims; i++) {
-        if (strcmprng(s1, s2, delims[i])) {
-            stmt->u.delim = i;
-            return 1;
+    if (s1) {
+        for (i = 0; i < sizeof delims / sizeof *delims; i++) {
+            if (strcmprng(s1, s2, delims[i])) {
+                stmt->u.delim = i;
+                return 1;
+            }
         }
     }
     return 0;

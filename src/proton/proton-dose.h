@@ -87,7 +87,6 @@ void proton_dose_get_plane(const ProtonDose *dose,
                            void (*colormap)(float, unsigned char *));
 
 
-/** TAGGED: This entire struct needs a reimplementation */
 typedef struct _proton_line/* {
     double depth;
     long npts;

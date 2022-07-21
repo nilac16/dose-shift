@@ -92,7 +92,6 @@ void PlotWindow::draw_measurements(wxGraphicsContext *gc, struct plot_context *c
 {
     const double dosescale = ctx->width.m_y / yticks.back();
     const double depthscale = ctx->width.m_x / static_cast<double>(xticks.back().second);
-    const double depthorig = std::fma(depthscale, 0.5, ctx->origin.m_x);
     gc->SetPen(measpen);
     if (ctx->measurements.empty()) {
         /* Draw a line at the currently drawn depth */

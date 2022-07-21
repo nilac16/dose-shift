@@ -23,8 +23,10 @@ enum {
     MCC_ERROR_UNCLASSIFIABLE_STATEMENT  /* Lexer failure */
 };
 
+
 /** FYI: This returns NULL if err == MCC_ERROR_NONE -- Do NOT puts() this! */
 const char *mcc_get_error(int err);
+
 
 typedef struct _mcc_data MCCData;
 
