@@ -29,7 +29,7 @@ void DepthControl::on_evt_text(wxCommandEvent &e)
         const unsigned int max = static_cast<int>(slider->GetMax());
         unsigned long x;
         str.ToULong(&x);
-        if (/* (x >= 0) &&  */(x <= max)) {
+        if (x > 0 &&  x <= max) {
             slider->SetValue(static_cast<int>(x));
             post_change_event();
         } else {
