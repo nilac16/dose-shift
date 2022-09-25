@@ -156,7 +156,7 @@ float proton_dose_max(const ProtonDose *dose)
 void proton_dose_depth_range(const ProtonDose *dose, float range[_q(static 2)])
 {
     range[0] = STATIC_CAST(float, proton_dose_min_depth(dose));
-    range[1] = STATIC_CAST(float, proton_dose_max_depth(dose));
+    range[1] = STATIC_CAST(float, dose->maxdepth);
 }
 
 float proton_dose_coronal_aspect(const ProtonDose *dose)
@@ -182,7 +182,7 @@ static ProtonImage *proton_image_flexible_alloc(long N)
     return img;
 }
 
-int proton_image_realloc(ProtonImage **img, long width, long height)
+bool proton_image_realloc(ProtonImage **img, long width, long height)
 {
     const long N = 3UL * width * height;
     const long N_old = (*img) ? (*img)->bufwidth : 0;
@@ -190,12 +190,12 @@ int proton_image_realloc(ProtonImage **img, long width, long height)
         free(*img);
         *img = proton_image_flexible_alloc((3 * N) / 2);
         if (!*img) {
-            return 1;
+            return true;
         }
     }
     (*img)->dim[0] = width;
     (*img)->dim[1] = height;
-    return 0;
+    return false;
 }
 
 void proton_image_destroy(ProtonImage *img)
@@ -213,7 +213,7 @@ unsigned char *proton_image_raw(ProtonImage *img)
     return img->buf;
 }
 
-int proton_image_empty(const ProtonImage *img)
+bool proton_image_empty(const ProtonImage *img)
 {
     return (img->dim[0] == 0) || (img->dim[1] == 0);
 }
@@ -335,9 +335,10 @@ static void proton_dose_find_scan(const ProtonDose *dose, float *z,
     *z -= flz;
 }
 
-/** REWRITEME: Interpolate lines, then cells. Line function returns the 
- *  next line on the image, cell function returns the next cell location. 
- *  The only arithmetic that should be done in the loop is int addition */
+/** REWRITEME: Not urgent, mul and imul are at most 3 µops on the target 
+ *  machines. Most of the affine transformations are completed with  
+ *  fma and lea instructions anyway
+ */
 void proton_dose_get_plane(const ProtonDose *dose,
                            ProtonImage *img, float depth,
                            void (*colormap)(float, unsigned char *))
@@ -349,18 +350,17 @@ void proton_dose_get_plane(const ProtonDose *dose,
     const float *dptr;
     float interp[4];
     long a[2];
-    if (proton_image_empty(img)) {
-        return;
-    }
-    proton_dose_find_scan(dose, &depth, &dptr);
-    for (a[1] = 0; a[1] < alim[1]; a[1]++) {
-        const float *const dline = dptr;
-        for (a[0] = 0; a[0] < alim[0]; a[0]++, dptr++) {
-            proton_dose_load_interpolant(interp, dptr, dose->px_dimensions[0],
-                                         axskip, depth, dose->dmax);
-            proton_dose_interpolate_cell(interp, a, alim, blim, buf, colormap);
+    if (!proton_image_empty(img)) {
+        proton_dose_find_scan(dose, &depth, &dptr);
+        for (a[1] = 0; a[1] < alim[1]; a[1]++) {
+            const float *const dline = dptr;
+            for (a[0] = 0; a[0] < alim[0]; a[0]++, dptr++) {
+                proton_dose_load_interpolant(interp, dptr, dose->px_dimensions[0],
+                                            axskip, depth, dose->dmax);
+                proton_dose_interpolate_cell(interp, a, alim, blim, buf, colormap);
+            }
+            dptr = dline + axskip;
         }
-        dptr = dline + axskip;
     }
 }
 

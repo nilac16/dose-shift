@@ -18,14 +18,12 @@ else ()
     if (FULL_DEBUG)
         set(USER_CXX_FLAGS "-g3 -Og -Wall -Wextra -fsanitize=address -fsanitize=undefined")
         set(USER_C_FLAGS "-g3 -Og -Wall -Wextra -fsanitize=address -fsanitize=undefined")
-        #set(USER_CXX_FLAGS "-g3 -O0 -Wall -Wextra")
-        #set(USER_C_FLAGS "-g3 -O0 -Wall -Wextra")
     else ()
         set(USER_CXX_FLAGS "-O2 -Wall -Wextra")
         set(USER_C_FLAGS "-O2 -Wall -Wextra")
     endif ()
-    set(USER_CXX_FLAGS "${USER_CXX_FLAGS} -mfma -mavx2")
-    set(USER_C_FLAGS "${USER_C_FLAGS} -mfma -mavx2 -Wno-implicit-fallthrough \
+    set(USER_CXX_FLAGS "${USER_CXX_FLAGS} -mfma -mavx2 -mbmi -mbmi2")
+    set(USER_C_FLAGS "${USER_C_FLAGS} -mfma -mavx2 -mbmi -mbmi2 -Wno-implicit-fallthrough \
                     -Werror=implicit-function-declaration")
 endif ()
 

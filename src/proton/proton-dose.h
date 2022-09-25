@@ -1,15 +1,19 @@
 #pragma once
-/** WARNING:
- *  The original implementation of this library considered ONLY the PIXELS 
- *  in DICOM images. This becomes a problem when applications are concerned 
- *  with the SLICE DEPTH, which is measured from the distal edge of the 
- *  bounding VOXELS. Various functions within this header have been rewritten 
- *  to account for this, but it may be a source of bugs for some time */
+/** This library could potentially be improved by inlining some of the 
+ *  trivial calls. Since the objects use C99 flexible arrays, this would 
+ *  require some type punning in the header, with any accesses to the flex 
+ *  array done from the source file
+ *  TODO: Determine how many scopes make only trivial calls to this lib
+ *        I am not doing a drastic rewrite to make a handful of functions 
+ *        leaf calls
+ */
 #ifndef PROTON_DOSE_H
 #define PROTON_DOSE_H
 
 #if __cplusplus
 extern "C" {
+#else
+#   include <stdbool.h>
 #endif
 
 
@@ -67,20 +71,15 @@ typedef struct _proton_image/* {
     unsigned char buf[];
 } */ProtonImage;
 
-int proton_image_realloc(ProtonImage **img, long width, long height);
+bool proton_image_realloc(ProtonImage **img, long width, long height);
 void proton_image_destroy(ProtonImage *img);
 
 long proton_image_dimension(const ProtonImage *img, int dim);
 unsigned char *proton_image_raw(ProtonImage *img);
 
-int proton_image_empty(const ProtonImage *img);
+bool proton_image_empty(const ProtonImage *img);
 
 /** Interpolates the dose grid onto the 2D buffer at @p img
- * 
- *  I could (should) perhaps write a version of this that interpolates 
- *  a plane of arbitrary physical dimension and orientation, but that 
- *  may not be fast enough for real-time display (unless I use SSE?)
- *                                       I should do ^^ this ^^ anyway
  */
 void proton_dose_get_plane(const ProtonDose *dose,
                            ProtonImage *img, float depth,
