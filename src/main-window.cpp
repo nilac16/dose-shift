@@ -1,9 +1,4 @@
-#include <csignal>
 #include "main-window.h"
-
-#if defined _MSC_VER && _MSC_VER
-typedef _crt_signal_t sighandler_t;
-#endif
 
 #define MAIN_TITLE wxT("QA shift visualizer")
 
@@ -28,9 +23,17 @@ void MainApplication::initialize_main_window()
     pwnd = new PlotWindow(frame);
 
     lwnd->Bind(wxEVT_FILEPICKER_CHANGED, &MainApplication::on_dicom_load, this);
+
+    /** Depth was changed */
     cwnd->Bind(EVT_DEPTH_CONTROL, &MainApplication::on_depth_change, this);
+
+    /** Line dose marker, measurement file or measurement depth were changed */
     cwnd->Bind(EVT_PLOT_CONTROL, &MainApplication::on_plot_change, this);
+
+    /** Detector window was manipulated at all */
     cwnd->Bind(EVT_SHIFT_CONTROL, &MainApplication::on_shift_change, this);
+
+    /** "Open plot window" button pressed */
     cwnd->Bind(EVT_PLOT_OPEN, &MainApplication::on_plot_open, this);
 }
 
@@ -41,11 +44,6 @@ void MainApplication::on_dicom_load(wxFileDirPickerEvent &e)
     if (canv->dose_loaded()) {
         pwnd->new_dose_loaded();
     } else {
-        /* What resources must be destroyed if the DICOM is unloaded? 
-        The dose window maintains a resizable pixel buffer, and simply 
-        doesn't draw it if a dose is not loaded
-        The plot window allocates a new line buffer when the dose is 
-        loaded, so that must be destroyed */
         pwnd->dose_unloaded();
     }
 }
@@ -54,7 +52,7 @@ void MainApplication::on_depth_change(wxCommandEvent &e)
 {
     if (canv->dose_loaded()) {
         canv->on_depth_changed(e);
-        pwnd->redraw();
+        pwnd->on_depth_changed(e);
     }
 }
 
@@ -62,8 +60,7 @@ void MainApplication::on_plot_change(wxCommandEvent &e)
 {
     if (canv->dose_loaded()) {
         canv->on_plot_changed(e);
-        pwnd->write_line_dose();
-        pwnd->redraw();
+        pwnd->on_plot_changed(e);
     }
 }
 
@@ -71,7 +68,7 @@ void MainApplication::on_shift_change(wxCommandEvent &e)
 {
     if (canv->dose_loaded()) {
         canv->on_shift_changed(e);
-        pwnd->redraw();
+        pwnd->on_shift_changed(e);
     }
 }
 

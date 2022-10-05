@@ -27,13 +27,7 @@ enum {
 
 /** Typedef'd because I want to use a C99 flexible array member
  *  I don't want to use the singleton array hack */
-typedef struct _proton_dose/* {
-    double top_left[3];
-    double px_spacing[3];
-    long px_dimensions[3];
-    float dmax, depmax;
-    float data[];
-} */ProtonDose;
+typedef struct _proton_dose ProtonDose;
 
 ProtonDose *proton_dose_create(const char *filename);
 void proton_dose_destroy(ProtonDose *dose);
@@ -47,29 +41,26 @@ double proton_dose_width(const ProtonDose *dose, int dim);
 
 float proton_dose_max(const ProtonDose *dose);
 
-/** DELETED: Replaced with a single call to get the entire range at once
- *  Rewritten: Returns the slice depth of the last indexed plane with 
- *  nonzero integrated dose. It is extremely likely that this depth will 
- *  not be integral */
-/* double proton_dose_max_depth(const ProtonDose *dose); */
-
-/** New: Returns 0.5 * dose->px_spacing[1] */
-/* double proton_dose_min_depth(const ProtonDose *dose); */
-
 /** Writes the valid depth range [d0, d1) to the first two floats at range */
 void proton_dose_depth_range(const ProtonDose *dose, float range[]);
 
 float proton_dose_coronal_aspect(const ProtonDose *dose);
 
+/** Interpolates the value of the line dose at @p depth from the currently
+ *  held line dose array */
+double proton_line_get_dose(const ProtonDose *dose, double depth);
+
+/** Interpolates the line dose at (x, y) onto the linedose array in @c dose */
+void proton_dose_get_line(ProtonDose *dose, double x, double y);
+
+const float *proton_line_raw(const ProtonDose *dose);
+long proton_line_length(const ProtonDose *dose);
+
 
 /** TODO: Add colormap to the image structure? This would make it easier 
  *  to swap them at runtime */
 
-typedef struct _proton_image/* {
-    long dim[2];
-    long bufwidth;
-    unsigned char buf[];
-} */ProtonImage;
+typedef struct _proton_image ProtonImage;
 
 bool proton_image_realloc(ProtonImage **img, long width, long height);
 void proton_image_destroy(ProtonImage *img);
@@ -79,29 +70,10 @@ unsigned char *proton_image_raw(ProtonImage *img);
 
 bool proton_image_empty(const ProtonImage *img);
 
-/** Interpolates the dose grid onto the 2D buffer at @p img
- */
+/** Interpolates the dose grid onto the 2D buffer at @p img */
 void proton_dose_get_plane(const ProtonDose *dose,
                            ProtonImage *img, float depth,
                            void (*colormap)(float, unsigned char *));
-
-
-typedef struct _proton_line/* {
-    double depth;
-    long npts;
-    float dose[];
-} */ProtonLine;
-
-ProtonLine *proton_line_create(const ProtonDose *dose, double depth);
-void proton_line_destroy(ProtonLine *line);
-
-long proton_line_length(const ProtonLine *line);
-const float *proton_line_raw(const ProtonLine *line);
-
-double proton_line_get_dose(const ProtonLine *line, double depth);
-
-/** Interpolates the line dose from the top to maxdepth */
-void proton_dose_get_line(ProtonLine *line, double x, double y);
 
 
 #if __cplusplus

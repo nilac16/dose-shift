@@ -196,6 +196,13 @@ bool DoseWindow::point_in_dose(const wxPoint &p)
     return clip.Contains(p);
 }
 
+void DoseWindow::write_line_dose() noexcept
+{
+    double x, y;
+    wxGetApp().get_line_dose(&x, &y);
+    proton_dose_get_line(dose, x, y);
+}
+
 DoseWindow::DoseWindow(wxWindow *parent):
     wxWindow(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxFULL_REPAINT_ON_RESIZE),
     dose(nullptr),
@@ -229,6 +236,7 @@ void DoseWindow::load_file(const char *filename)
         image_realloc_and_write(this->GetSize());
         affine_write();
         conv_write();
+        write_line_dose();
     } else {
         wxMessageBox(wxT("Failed to load dose"),
             wxT("Load failed"), wxICON_ERROR, this);
@@ -244,10 +252,8 @@ void DoseWindow::on_depth_changed(wxCommandEvent &WXUNUSED(e))
 
 void DoseWindow::on_plot_changed(wxCommandEvent &WXUNUSED(e))
 {
-    /* this is checked in the parent scope
-    if (dose_loaded()) { */
-        this->Refresh();
-    /* } */
+    this->Refresh();
+    write_line_dose();
 }
 
 void DoseWindow::on_shift_changed(wxCommandEvent &WXUNUSED(e))
@@ -259,6 +265,7 @@ void DoseWindow::on_shift_changed(wxCommandEvent &WXUNUSED(e))
 void DoseWindow::get_depth_range(float range[]) const noexcept
 {
     proton_dose_depth_range(dose, range);
+    std::cout << "Depth range is [" << range[0] << ", " << range[1] << ")\n";
 }
 
 const ProtonDose *DoseWindow::get_dose() const noexcept

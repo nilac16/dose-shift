@@ -32,10 +32,11 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${USER_C_FLAGS}")
 
 add_subdirectory(${CMAKE_SOURCE_DIR}/src)
 add_subdirectory(${CMAKE_SOURCE_DIR}/src/ctrls)
+add_subdirectory(${CMAKE_SOURCE_DIR}/src/plots)
 add_subdirectory(${CMAKE_SOURCE_DIR}/src/proton)
 
 add_executable(${PROJECT_NAME} ${WIN_NATIVE}
-    ${MAIN_SOURCES} ${CTRL_SOURCES})
+    ${MAIN_SOURCES} ${PLOT_SOURCES} ${CTRL_SOURCES})
 
 target_link_libraries(${PROJECT_NAME}
     PRIVATE ${wxWidgets_LIBRARIES}

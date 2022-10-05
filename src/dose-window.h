@@ -32,6 +32,7 @@ class DoseWindow : public wxWindow {
     void image_realloc_and_write(const wxSize &csz);
 
     bool point_in_dose(const wxPoint &p);
+    void write_line_dose() noexcept;
 
 public:
     DoseWindow(wxWindow *parent);

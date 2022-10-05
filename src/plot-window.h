@@ -4,57 +4,54 @@
 #define PLOT_WINDOW_H
 
 #include <wx/wx.h>
-#include <vector>
+#include <wx/notebook.h>
+#include <wx/graphics.h>
+#include "plots/line-dose.h"
+#include "plots/planar-dose.h"
+
+/** TODO: Computations with LibreOffice yielded an aspect ratio of 1.45,
+ *        test this with MS Excel to be certain 
+ *                      ** originally 1044x720 **
+ * 
+ *  RESULT: In Excel, the plot boxes appear to have an aspect ratio of 1.13
+ *  ACTUALLY: On the PDF, they have an aspect of ~1.3
+ */
+#define IMAGE_RES wxSize(1080, 800)
+
+/** PLEASE ALWAYS MAKE THIS THE SQUARE ROOT OF THE OUTPUT IMAGE AREA **/
+constexpr double image_gmean = 929.51600308978;
 
 
 class PlotWindow : public wxFrame {
-    wxWindow *canv;
+    wxNotebook *nb;
+    LineDosePlot *ldplot;
+    PlanarDosePlot *pdplot;
 
-    struct plot_context {
-        wxFont tikfont, axfont;
-        wxPoint2DDouble origin, width;
-        wxPoint2DDouble bright, tright, tleft;
-        double tikwidth, ytikscale;
-        double boxwidth;
-        double maxxheight, maxywidth, maxpwidth;
-        std::vector<std::pair<double, double>> measurements;
-    };
-
-    ProtonLine *line;
-    std::vector<std::pair<double, long>> xticks;
-    std::vector<double> yticks;
-    std::vector<wxString> xticklabels, yticklabels;
-
-    const wxColour dosecolor, meascolor, diffcolor;
-    const wxPen dashpen, dosepen, measpen, diffpen, diffpendashed;
-
-    void draw_legend(wxGraphicsContext *gc, const struct plot_context *ctx);
-    void draw_measurements(wxGraphicsContext *gc, struct plot_context *ctx);                       
-    void draw_line_dose(wxGraphicsContext *gc, const struct plot_context *ctx);
-    void draw_dashes(wxGraphicsContext *gc, const struct plot_context *ctx);
-
-    void draw_xaxis(wxGraphicsContext *gc, const struct plot_context *ctx);
-    void draw_yaxis(wxGraphicsContext *gc, const struct plot_context *ctx);
-    void draw_paxis(wxGraphicsContext *gc, const struct plot_context *ctx);
-
-    void initialize_plot_context(wxGraphicsContext *gc, struct plot_context *ctx);
-    void draw_plot(wxGraphicsContext *gc);
-
-    void on_evt_paint(wxPaintEvent &e);
     void on_evt_close(wxCloseEvent &e);
+
+    void on_context_menu_selection(wxCommandEvent &e);
     void on_context_menu(wxContextMenuEvent &e);
 
-    void write_xaxis();
-    void write_yaxis();
-
-    void allocate_line_dose();
+    inline ProtonPlot *get_current_plot()
+        { return dynamic_cast<ProtonPlot *>(nb->GetCurrentPage()); }
 
 public:
     PlotWindow(wxWindow *parent);
     ~PlotWindow();
 
-    void write_line_dose();
-    void redraw();
+/** The only event that requires more than a redraw (currently) is the plot 
+ *  changing, since the line dose will need to be reinterpolated. Depth/
+ *  measurement markers are computed in the paint handler
+ */
+
+    void on_depth_changed(wxCommandEvent &e);
+
+/** REMEMBER: You may want to modify this to only reinterpolate the line 
+ *  dose if that tab is selected. Otherwise, do so when it is reselected
+ *  only */
+    void on_plot_changed(wxCommandEvent &e);
+    void on_shift_changed(wxCommandEvent &e);
+    
     void new_dose_loaded();
     void dose_unloaded();
 };
