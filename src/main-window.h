@@ -37,8 +37,8 @@ public:
 
     void set_translation(double x, double y);
 
-    bool dose_loaded() const noexcept;
-    const ProtonDose *get_dose() const noexcept;
+    constexpr bool dose_loaded() const noexcept { return canv->dose_loaded(); }
+    inline const ProtonDose *get_dose() const noexcept { return canv->get_dose(); }
 
     double get_max_slider_depth() const;
     double get_max_dose() const noexcept;

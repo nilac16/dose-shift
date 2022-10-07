@@ -9,11 +9,10 @@ struct _dicom_rtdose {
 
 RTDose *rtdose_create(const char *filename)
 {
-    OFCondition stat;
     RTDose *dose;
     dose = reinterpret_cast<RTDose *>(new (std::nothrow) DRTDose);
     if (dose) {
-        stat = dose->dcm.loadFile(filename);
+        OFCondition stat = dose->dcm.loadFile(filename);
         if (stat.bad()) {
             rtdose_destroy(dose);
             dose = NULL;
@@ -27,32 +26,30 @@ void rtdose_destroy(RTDose *dcm)
     delete reinterpret_cast<DRTDose *>(dcm);
 }
 
-int rtdose_get_img_pos_pt(const RTDose *dcm, double imgpos[])
+bool rtdose_get_img_pos_pt(const RTDose *dcm, double imgpos[])
 {
-    OFCondition stat;
     Float64 x;
     for (unsigned long i = 0; i < 3; i++, imgpos++) {
-        stat = dcm->dcm.getImagePositionPatient(x, i);
+        OFCondition stat = dcm->dcm.getImagePositionPatient(x, i);
         if (stat.bad()) {
-            return 1;
+            return true;
         }
         *imgpos = static_cast<double>(x);
     }
-    return 0;
+    return false;
 }
 
-int rtdose_get_px_spacing(const RTDose *dcm, double spacing[])
+bool rtdose_get_px_spacing(const RTDose *dcm, double spacing[])
 {
-    OFCondition stat;
     Float64 x;
-    stat = dcm->dcm.getPixelSpacing(x, 0);
+    OFCondition stat = dcm->dcm.getPixelSpacing(x, 0);
     if (stat.bad()) {
-        return 1;
+        return true;
     }
     spacing[0] = static_cast<double>(x);
     stat = dcm->dcm.getPixelSpacing(x, 1);
     if (stat.bad()) {
-        return 1;
+        return true;
     }
     spacing[1] = static_cast<double>(x);
     /* This may be wrong. I think the correct information is in the grid
@@ -60,36 +57,36 @@ int rtdose_get_px_spacing(const RTDose *dcm, double spacing[])
     uniform grid frame offsets */
     stat = dcm->dcm.getSliceThickness(x);
     if (stat.bad()) {
-        return 1;
+        return true;
     }
     spacing[2] = static_cast<double>(x);
-    return 0;
+    return false;
 }
 
-int rtdose_get_dimensions(const RTDose *dcm, long dim[])
+bool rtdose_get_dimensions(const RTDose *dcm, long dim[])
 {
     OFCondition stat;
     Uint16 x;
     Sint32 y;
     stat = dcm->dcm.getColumns(x);
     if (stat.bad()) {
-        return 1;
+        return true;
     }
     dim[0] = static_cast<long>(x);
     stat = dcm->dcm.getRows(x);
     if (stat.bad()) {
-        return 1;
+        return true;
     }
     dim[1] = static_cast<long>(x);
     stat = dcm->dcm.getNumberOfFrames(y);
     if (stat.bad()) {
-        return 1;
+        return true;
     }
     dim[2] = static_cast<long>(y);
-    return 0;
+    return false;
 }
 
-int rtdose_get_dose_data(RTDose *dcm, const long dim[], float *dptr, float *dmax)
+bool rtdose_get_dose_data(RTDose *dcm, const long dim[], float *dptr, float *dmax)
 {
     const long ax_N = dim[0] * dim[1];
     OFVector<Float64> plane;
@@ -100,7 +97,7 @@ int rtdose_get_dose_data(RTDose *dcm, const long dim[], float *dptr, float *dmax
         long N = ax_N;
         OFCondition stat = dcm->dcm.getDoseImage(plane, k);
         if (stat.bad()) {
-            return 1;
+            return true;
         }
         it = plane.begin();
         do {
@@ -113,5 +110,5 @@ int rtdose_get_dose_data(RTDose *dcm, const long dim[], float *dptr, float *dmax
             N--;
         } while (N);
     }
-    return 0;
+    return false;
 }

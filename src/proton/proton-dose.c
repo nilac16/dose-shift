@@ -117,7 +117,7 @@ double proton_line_get_dose(const ProtonDose *dose, double depth)
         depth -= x;
         i = STATIC_CAST(long, x);
     }
-    return dose->linedose[i] + (dose->linedose[i + 1] - dose->linedose[i]) * depth;
+    return (i > 0 && i < dose->nplanes) ? dose->linedose[i] + (dose->linedose[i + 1] - dose->linedose[i]) * depth : 0;
 }
 
 static void proton_dose_find_square(const ProtonDose *dose, long a[_q(static 2)],

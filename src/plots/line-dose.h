@@ -4,10 +4,9 @@
 #define LINE_DOSE_PLOT_H
 
 #include "proton-plot.h"
-#include <vector>
 
 
-class LineDosePlot : public wxWindow, public ProtonPlot {
+class LineDosePlot : public ProtonPlot {
     struct plot_context {
         wxFont tikfont, axfont;
         wxPoint2DDouble origin, width;
@@ -17,10 +16,6 @@ class LineDosePlot : public wxWindow, public ProtonPlot {
         double maxxheight, maxywidth, maxpwidth;
         std::vector<std::pair<double, double>> measurements;
     };
-
-    std::vector<std::pair<double, long>> xticks;
-    std::vector<double> yticks;
-    std::vector<wxString> xticklabels, yticklabels;
 
     const wxColour dosecolor, meascolor, diffcolor;
     const wxPen dashpen, dosepen, measpen, diffpen, diffpendashed;
@@ -36,23 +31,15 @@ class LineDosePlot : public wxWindow, public ProtonPlot {
 
     void initialize_plot_context(wxGraphicsContext *gc, struct plot_context *ctx);
 
-    void on_evt_paint(wxPaintEvent &e);
-
     void write_xaxis();
     void write_yaxis();
-
-    inline void redraw() { this->Refresh(); }
 
 public:
     LineDosePlot(wxWindow *parent);
     ~LineDosePlot() = default;
 
     virtual void draw_plot(wxGraphicsContext *gc) override;
-
-    void write_line_dose();
-
-    void new_dose_loaded();
-    void dose_unloaded();
+    void write_axes();
 };
 
 

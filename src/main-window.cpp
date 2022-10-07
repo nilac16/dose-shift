@@ -41,11 +41,7 @@ void MainApplication::on_dicom_load(wxFileDirPickerEvent &e)
 {
     wxString str = e.GetPath();
     canv->load_file(str.c_str());
-    if (canv->dose_loaded()) {
-        pwnd->new_dose_loaded();
-    } else {
-        pwnd->dose_unloaded();
-    }
+    pwnd->on_dicom_changed(e);
 }
 
 void MainApplication::on_depth_change(wxCommandEvent &e)
@@ -118,15 +114,15 @@ void MainApplication::set_translation(double x, double y)
     cwnd->set_translation(x, y);
 }
 
-bool MainApplication::dose_loaded() const noexcept
+/* bool MainApplication::dose_loaded() const noexcept
 {
     return canv->dose_loaded();
-}
+} */
 
-const ProtonDose *MainApplication::get_dose() const noexcept
+/* const ProtonDose *MainApplication::get_dose() const noexcept
 {
     return canv->get_dose();
-}
+} */
 
 double MainApplication::get_max_slider_depth() const
 {

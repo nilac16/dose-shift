@@ -16,7 +16,6 @@
 #define MIN_XTICKS      9
 #define MIN_YTICKS      9
 
-
 #define IMAGE_AXFONT_SIZE  20
 #define IMAGE_TIKFONT_SIZE 14
 
@@ -329,27 +328,6 @@ void LineDosePlot::draw_plot(wxGraphicsContext *gc)
     }
 }
 
-template <typename HDC>
-static wxGraphicsContext *get_graphics_context(const HDC &dc)
-{
-/* Is it already doing this?
-#if _WIN32
-    return wxGraphicsRenderer::GetDirect2DRenderer()->CreateContext(dc);
-#else */
-    return wxGraphicsContext::Create(dc);
-/* #endif */
-}
-
-void LineDosePlot::on_evt_paint(wxPaintEvent &WXUNUSED(e))
-{
-    wxPaintDC dc(this);
-    if (wxGetApp().dose_loaded()) {
-        wxGraphicsContext *gc = get_graphics_context(dc);
-        draw_plot(gc);
-        delete gc;
-    }
-}
-
 void LineDosePlot::write_xaxis()
 {
     constexpr std::array<long, 7> tikdivs = { 100, 50, 20, 10, 5, 2, 1 };
@@ -357,7 +335,7 @@ void LineDosePlot::write_xaxis()
     double tikinc;
     long div = 0, i;
     ldiv_t res;
-    for (const long &tdiv : tikdivs) {
+    for (const long tdiv : tikdivs) {
         res = ldiv(maxdepth, tdiv);
         if (res.quot > MIN_XTICKS) {
             div = tdiv;
@@ -365,7 +343,7 @@ void LineDosePlot::write_xaxis()
         }
     }
     if (div) {
-        double xtra = static_cast<double>(res.rem) / static_cast<double>(maxdepth);
+        const double xtra = static_cast<double>(res.rem) / static_cast<double>(maxdepth);
         tikinc = (1.0 - xtra) / static_cast<double>(res.quot);
     } else [[unlikely]] {
         /* Is this even possible? */
@@ -399,7 +377,7 @@ void LineDosePlot::write_yaxis()
 }
 
 LineDosePlot::LineDosePlot(wxWindow *parent):
-    wxWindow(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxFULL_REPAINT_ON_RESIZE),
+    ProtonPlot(parent),
     dosecolor(60, 160, 100),
     meascolor(60, 60, 190),
     diffcolor(200, 50, 20),
@@ -409,27 +387,11 @@ LineDosePlot::LineDosePlot(wxWindow *parent):
     diffpen(diffcolor, 1, wxPENSTYLE_SOLID),
     diffpendashed(diffcolor, 1, wxPENSTYLE_SHORT_DASH)
 {
-    this->Bind(wxEVT_PAINT, &LineDosePlot::on_evt_paint, this);
-
-#if _WIN32
-    this->SetDoubleBuffered(true);
-#endif
+    
 }
 
-void LineDosePlot::write_line_dose()
-{
-    redraw();
-}
-
-void LineDosePlot::new_dose_loaded()
+void LineDosePlot::write_axes()
 {
     write_xaxis();
     write_yaxis();
-    write_line_dose();
-}
-
-void LineDosePlot::dose_unloaded()
-{
-    // OOF
-    redraw();
 }

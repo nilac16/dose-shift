@@ -2,14 +2,7 @@
 
 
 PlanarDosePlot::PlanarDosePlot(wxWindow *parent):
-    wxWindow(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxFULL_REPAINT_ON_RESIZE)
-{
-#if _WIN32
-    this->SetDoubleBuffered(true);
-#endif
-}
-
-PlanarDosePlot::~PlanarDosePlot()
+    ProtonPlot(parent)
 {
 
 }

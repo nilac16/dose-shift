@@ -75,6 +75,14 @@ PlotWindow::~PlotWindow()
     
 }
 
+void PlotWindow::on_dicom_changed(wxCommandEvent &WXUNUSED(e))
+{
+    if (wxGetApp().dose_loaded()) {
+        ldplot->write_axes();
+    }
+    nb->GetCurrentPage()->Refresh();
+}
+
 void PlotWindow::on_depth_changed(wxCommandEvent &WXUNUSED(e))
 {
     /* Both plots' markers must be redrawn */
@@ -84,7 +92,6 @@ void PlotWindow::on_depth_changed(wxCommandEvent &WXUNUSED(e))
 void PlotWindow::on_plot_changed(wxCommandEvent &WXUNUSED(e))
 {
     /* Line dose needs to be updated, and measurements reinterpolated */
-    ldplot->write_line_dose();
     nb->GetCurrentPage()->Refresh();
 }
 
@@ -92,14 +99,4 @@ void PlotWindow::on_shift_changed(wxCommandEvent &WXUNUSED(e))
 {
     /* Measurements need to be reinterpolated */
     nb->GetCurrentPage()->Refresh();
-}
-
-void PlotWindow::new_dose_loaded()
-{
-    ldplot->new_dose_loaded();
-}
-
-void PlotWindow::dose_unloaded()
-{
-    ldplot->dose_unloaded();
 }

@@ -44,16 +44,10 @@ public:
  *  measurement markers are computed in the paint handler
  */
 
+    void on_dicom_changed(wxCommandEvent &e);
     void on_depth_changed(wxCommandEvent &e);
-
-/** REMEMBER: You may want to modify this to only reinterpolate the line 
- *  dose if that tab is selected. Otherwise, do so when it is reselected
- *  only */
     void on_plot_changed(wxCommandEvent &e);
     void on_shift_changed(wxCommandEvent &e);
-    
-    void new_dose_loaded();
-    void dose_unloaded();
 };
 
 

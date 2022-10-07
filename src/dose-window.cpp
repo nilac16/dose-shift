@@ -253,6 +253,10 @@ void DoseWindow::on_depth_changed(wxCommandEvent &WXUNUSED(e))
 void DoseWindow::on_plot_changed(wxCommandEvent &WXUNUSED(e))
 {
     this->Refresh();
+    /** HI:
+     *  Consider whether or not we actually want to do this while this plot 
+     *  is not selected (none of the tested machines had any trouble with 
+     *  this) */
     write_line_dose();
 }
 
@@ -265,7 +269,6 @@ void DoseWindow::on_shift_changed(wxCommandEvent &WXUNUSED(e))
 void DoseWindow::get_depth_range(float range[]) const noexcept
 {
     proton_dose_depth_range(dose, range);
-    std::cout << "Depth range is [" << range[0] << ", " << range[1] << ")\n";
 }
 
 const ProtonDose *DoseWindow::get_dose() const noexcept

@@ -1,6 +1,7 @@
 #include <ctype.h>
 #include <math.h>
 #include <setjmp.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,7 +10,7 @@
 
 #if _MSC_VER
 #   define _q(qualifiers)
-typedef int (*__compar_fn_t)(const void *, const void *); /* Seriously? */
+typedef int (*__compar_fn_t)(const void *, const void *);
 #else
 #   define _q(qualifiers) qualifiers
 #endif
@@ -32,11 +33,7 @@ const char *mcc_get_error(int err)
         "Unclassifiable statement",
     };
     static const int nstrings = sizeof errstrings / sizeof *errstrings;
-    if ((err > 0) && (err < nstrings)) {
-        return errstrings[err];
-    } else {
-        return NULL;
-    }
+    return (err > 0 && err < nstrings) ? errstrings[err] : NULL;
 }
 
 struct _mcc_data {
@@ -174,17 +171,17 @@ static void strtok_ws(const char **s, const char **endptr)
 /** Compares the range [s1, s2) to the C string at sptr, returning one if 
  *  and only if they are equivalent within the range. The string pointed to 
  *  by sptr must contain a nul terminator by the end of the range */
-static int strcmprng(const char *s1, const char *const s2, const char *sptr)
+static bool strcmprng(const char *s1, const char *const s2, const char *sptr)
 {
     while ((s1 < s2) && *sptr) {
         if (*s1 == *sptr) {
             s1++;
             sptr++;
         } else {
-            return 0;
+            return false;
         }
     }
-    return (s1 == s2) && (*sptr == '\0');
+    return s1 == s2 && *sptr == '\0';
 }
 
 /** Returns a pointer to the first non-whitespace character from the start 
@@ -200,13 +197,13 @@ static char *strltrim(char *s)
 /** Replaces the line break character with a nul terminator */
 static void strlnterm(char *s)
 {
-    while (*s && !(*s == '\n')) {
+    while (*s && *s != '\n') {
         s++;
     }
     *s = '\0';
 }
 
-static int mcc_data_classify_assignment(char *s, struct mcc_stmt *stmt)
+static bool mcc_data_classify_assignment(char *s, struct mcc_stmt *stmt)
 {
     char *eq = strchr(s, '=');
     if (eq) {
@@ -214,34 +211,34 @@ static int mcc_data_classify_assignment(char *s, struct mcc_stmt *stmt)
         *eq = '\0';
         stmt->u.keyval.val = eq + 1;
         strlnterm(eq + 1);
-        return 1;
+        return true;
     } else {
-        return 0;
+        return false;
     }
 }
 
-static int mcc_data_classify_data(const char *s, struct mcc_stmt *stmt)
+static bool mcc_data_classify_data(const char *s, struct mcc_stmt *stmt)
 {
     const char *s1 = s, *s2;
     char *endptr;
     strtok_ws(&s1, &s2);
     if (!s1) {
-        return 0;
+        return false;
     }
     stmt->u.data.pos = strtod(s1, &endptr);
     if (s2 != endptr) {
-        return 0;
+        return false;
     }
     s1 = s2;
     strtok_ws(&s1, &s2);
     if (!s1) {
-        return 0;
+        return false;
     }
     stmt->u.data.dose = strtod(s1, &endptr);
     return s2 == endptr;
 }
 
-static int mcc_data_classify_delim(const char *s, struct mcc_stmt *stmt)
+static bool mcc_data_classify_delim(const char *s, struct mcc_stmt *stmt)
 {
     const char *s1 = s, *s2;
     unsigned i;
@@ -250,11 +247,11 @@ static int mcc_data_classify_delim(const char *s, struct mcc_stmt *stmt)
         for (i = 0; i < sizeof delims / sizeof *delims; i++) {
             if (strcmprng(s1, s2, delims[i])) {
                 stmt->u.delim = i;
-                return 1;
+                return true;
             }
         }
     }
-    return 0;
+    return false;
 }
 
 static void mcc_data_classify_statement(char *s, struct mcc_stmt *stmt)
@@ -415,8 +412,6 @@ static struct mcc_scan *mcc_scan_trim(struct mcc_scan *scan, jmp_buf env)
         scan = newptr;
         scan->_cap = scan->sz;
     } else {
-        /* realloc() can fail in certain circumstances (machine, debug mode,
-        OS, etc...) */
         longjmp(env, MCC_ERROR_NOMEM);
     }
     return scan;
@@ -438,6 +433,9 @@ static MCCData *mcc_data_trim(MCCData *data, jmp_buf env)
     }
     return data;
 }
+
+/** The below floating point subtractions/comparisons are safe in practice, 
+ *  because they will always differ by ~5mm--nowhere near machine epsilon */
 
 static int mcc_data_scancmp(const struct mcc_scan **s1, const struct mcc_scan **s2)
 {
@@ -569,7 +567,7 @@ static double mcc_data_interp_scan(const struct mcc_scan *scan, double x)
 {
     const int l = mcc_data_data_bsearch(scan, x);
     const unsigned r = l + 1;
-    if ((l >= 0) && (r < scan->sz)) {
+    if (l >= 0 && r < scan->sz) {
         const double d0 = scan->data[l].dose;
         const double m = scan->data[r].dose - d0;
         const double X = (x - scan->data[l].x) / (scan->data[r].x - scan->data[l].x);
@@ -587,7 +585,7 @@ static double mcc_data_interp_scans(const struct mcc_scan *scan1,
         mcc_data_interp_scan(scan1, x),
         mcc_data_interp_scan(scan2, x)
     };
-    if ((interp[0] != SIG_NONCOMPACT) && (interp[1] != SIG_NONCOMPACT)) {
+    if (interp[0] != SIG_NONCOMPACT && interp[1] != SIG_NONCOMPACT) {
         const double m = interp[1] - interp[0];
         const double Y = (y - scan1->y) / (scan2->y - scan1->y);
         return fma(m, Y, interp[0]);
@@ -609,7 +607,7 @@ double mcc_data_get_dose(const MCCData *data, double x, double y)
 {
     const int l = mcc_data_scan_bsearch(data, y);
     const unsigned r = l + 1;
-    if ((l >= 0) && (r < data->sz)) {
+    if (l >= 0 && r < data->sz) {
         return mcc_data_interp_scans(data->scans[l], data->scans[r], x, y);        
     } else {
         return 0.0;

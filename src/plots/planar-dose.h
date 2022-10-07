@@ -6,11 +6,11 @@
 #include "proton-plot.h"
 
 
-class PlanarDosePlot : public wxWindow, public ProtonPlot {
+class PlanarDosePlot : public ProtonPlot {
 
 public:
     PlanarDosePlot(wxWindow *parent);
-    ~PlanarDosePlot();
+    ~PlanarDosePlot() = default;
 
     virtual void draw_plot(wxGraphicsContext *gc) override;
 };
