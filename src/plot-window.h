@@ -37,12 +37,11 @@ class PlotWindow : public wxFrame {
 
 public:
     PlotWindow(wxWindow *parent);
-    ~PlotWindow();
+    ~PlotWindow() = default;
 
 /** The only event that requires more than a redraw (currently) is the plot 
  *  changing, since the line dose will need to be reinterpolated. Depth/
- *  measurement markers are computed in the paint handler
- */
+ *  measurement markers are computed in the paint handler */
 
     void on_dicom_changed(wxCommandEvent &e);
     void on_depth_changed(wxCommandEvent &e);

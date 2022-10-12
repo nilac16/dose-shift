@@ -33,7 +33,9 @@ typedef struct _mcc_data MCCData;
 MCCData *mcc_data_create(const char *filename, int *stat);
 void mcc_data_destroy(MCCData *mcc);
 
-double mcc_data_get_dose(const MCCData *mcc, double x, double y);
+/* "point" dose? */
+double mcc_data_get_point_dose(const MCCData *mcc, double x, double y);
+double mcc_data_get_integrated_dose(const MCCData *mcc);
 
 
 #if __cplusplus

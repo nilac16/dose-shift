@@ -45,7 +45,7 @@ public:
 
     void unload_dose() noexcept;
 
-    void get_measurements(std::vector<std::pair<double, double>> &meas) const;
+    void get_measurements(std::vector<std::tuple<double, double, double>> &meas) const;
     wxString get_RS_directory() const;
 
     void convert_coordinates(double *x, double *y) const noexcept;

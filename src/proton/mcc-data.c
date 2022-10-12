@@ -38,6 +38,7 @@ const char *mcc_get_error(int err)
 
 struct _mcc_data {
     unsigned int sz, _cap;
+    double sum;
     struct mcc_scan {
         unsigned int sz, _cap;
         double y;
@@ -455,9 +456,27 @@ static void mcc_data_sort(MCCData *data)
           (__compar_fn_t)mcc_data_scancmp);
     for (i = 0; i < data->sz; i++) {
         qsort(data->scans[i]->data, data->scans[i]->sz,
-              sizeof *data->scans[i]->data,
-              (__compar_fn_t)mcc_data_datacmp);
+              sizeof *data->scans[i]->data, (__compar_fn_t)mcc_data_datacmp);
     }
+}
+
+static double mcc_data_lebesgue_dose(const MCCData *data)
+{
+    /* Each detector is 4.4 x 4.4[ x 3] mm³ (from PTW's website) */
+    return 27 * 27 * 1e-2 / 1405;
+}
+
+static void mcc_data_integrate(MCCData *data)
+{
+    const double dmeasure = mcc_data_lebesgue_dose(data);
+    unsigned i, j;
+    data->sum = 0.0;
+    for (j = 0; j < data->sz; j++) {
+        for (i = 0; i < data->scans[j]->sz; i++) {
+            data->sum += data->scans[j]->data[i].dose;
+        }
+    }
+    data->sum *= dmeasure;
 }
 
 static MCCData *mcc_data_alloc(FILE *mcc, int *stat)
@@ -476,6 +495,8 @@ static MCCData *mcc_data_alloc(FILE *mcc, int *stat)
     mcc_data_load_nodes(mcc, (MCCData **)&data, env);
     data = mcc_data_trim(data, env);
     mcc_data_sort(data);
+    mcc_data_integrate(data);
+    printf("Integrated (summed) MCC dose is %g (Gy?)\n", data->sum);
     return data;
 }
 
@@ -594,7 +615,7 @@ static double mcc_data_interp_scans(const struct mcc_scan *scan1,
     }
 }
 
-double mcc_data_get_dose(const MCCData *data, double x, double y)
+double mcc_data_get_point_dose(const MCCData *data, double x, double y)
 /** STRATAGEM:
  *      BILINEAR BABY
  *      Find the scans bounding above and below
@@ -612,4 +633,9 @@ double mcc_data_get_dose(const MCCData *data, double x, double y)
     } else {
         return 0.0;
     }
+}
+
+double mcc_data_get_integrated_dose(const MCCData *data)
+{
+    return data->sum;
 }

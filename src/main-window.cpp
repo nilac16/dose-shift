@@ -139,7 +139,7 @@ void MainApplication::unload_dose() noexcept
     canv->unload_dose();
 }
 
-void MainApplication::get_measurements(std::vector<std::pair<double, double>> &meas) const
+void MainApplication::get_measurements(std::vector<std::tuple<double, double, double>> &meas) const
 {
     cwnd->get_measurements(meas);
 }

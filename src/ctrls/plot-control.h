@@ -4,6 +4,7 @@
 #define PLOT_CONTROL_H
 
 #include <array>
+#include <tuple>
 #include <vector>
 #include <wx/wx.h>
 /* #include <wx/spinctrl.h> */
@@ -33,6 +34,7 @@ public:
     constexpr bool is_loaded() const noexcept { return data != nullptr; }
     double get_dose(double x, double y) const noexcept;
     constexpr double get_depth() const noexcept { return depth; }
+    double get_integrated_dose() const noexcept;
 };
 
 
@@ -53,7 +55,7 @@ public:
     void get_point(double *x, double *y) const noexcept;
     void set_point(double x, double y);
 
-    void get_measurements(std::vector<std::pair<double, double>> &meas) const;
+    void get_measurements(std::vector<std::tuple<double, double, double>> &meas) const;
 };
 
 

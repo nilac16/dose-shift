@@ -105,7 +105,12 @@ PlotMeasurement::~PlotMeasurement()
 
 double PlotMeasurement::get_dose(double x, double y) const noexcept
 {
-    return mcc_data_get_dose(data, x, y);
+    return mcc_data_get_point_dose(data, x, y);
+}
+
+double PlotMeasurement::get_integrated_dose() const noexcept
+{
+    return mcc_data_get_integrated_dose(data);
 }
 
 void PlotControl::post_change_event()
@@ -188,14 +193,14 @@ void PlotControl::set_point(double x, double y)
     post_change_event();
 }
 
-void PlotControl::get_measurements(std::vector<std::pair<double, double>> &meas) const
+void PlotControl::get_measurements(std::vector<std::tuple<double, double, double>> &meas) const
 {
     double mccx = this->x, mccy = this->y;
     wxGetApp().convert_coordinates(&mccx, &mccy);
     meas.clear();
     for (const PlotMeasurement *p : measurements) {
         if (p->is_loaded()) {
-            meas.push_back(std::pair(p->get_depth(), p->get_dose(mccx, mccy)));
+            meas.push_back({p->get_depth(), p->get_dose(mccx, mccy), p->get_integrated_dose()});
         }
     }
 }

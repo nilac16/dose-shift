@@ -19,7 +19,7 @@
 
 /* The threshold dose used to determine whether a plane is empty or not
 If all dose values are less than this, it is empty */
-#define NULL_THRESH 0.001
+#define NULL_THRESH 0.0001
 
 /** TODO: Rewrite the cell interpolator: create functions for some of its
  *  branches (SEE BELOW) */
@@ -51,8 +51,21 @@ static float proton_planes_linesum(const float *fptr, const float *const end)
     return acc;
 }
 
+static float proton_planes_lebesgue_dose(const ProtonDose *dose)
+{
+    /** Constant measure
+     *  Consists of:
+     *    - Area of a coronal slice (in m²)
+     *    - Density of water (1000 kg m⁻³)
+     *    - Conversion of joules to kilojoules
+     *  The last two points cancel
+     */
+    return (dose->px_spacing[0] * dose->px_spacing[2]) * 1e-4;
+}
+
 static void proton_planes_integrate(ProtonDose *dose)
 {
+    const float dmeasure = proton_planes_lebesgue_dose(dose);
     const float *f1 = dose->data, *f2 = dose->data + dose->px_dimensions[0];
     long j, k;
     for (k = 0; k < dose->px_dimensions[2]; k++) {
@@ -61,6 +74,9 @@ static void proton_planes_integrate(ProtonDose *dose)
             f1 = f2;
             f2 += dose->px_dimensions[0];
         }
+    }
+    for (j = 0; j < dose->px_dimensions[1]; j++) {
+        dose->planes[j] *= dmeasure;
     }
 }
 
@@ -71,10 +87,11 @@ static void proton_planes_constrict(ProtonDose *dose)
     for (i = end = 0; i < dose->px_dimensions[1]; i++) {
         end = (dose->planes[i] > NULL_THRESH) ? i : end;
     }
-    testptr = realloc(dose->planes, sizeof *dose->planes * ++end);
+    testptr = realloc(dose->planes, sizeof *dose->planes * (++end + 1));
     if (testptr) {
         dose->planes = testptr;
         dose->nplanes = end;
+        dose->planes[end] = 0.0f;
     } else {
         /* Honestly, is this even possible on the target machines? */
         free(dose->planes);
@@ -108,16 +125,25 @@ static double proton_dose_max_depth(const ProtonDose *dose)
     return (double)dose->nplanes * dose->px_spacing[1];
 }
 
+static long proton_dose_1d_interp(const ProtonDose *dose, double *depth)
+{
+    double x;
+    *depth = (*depth - proton_dose_min_depth(dose)) / dose->px_spacing[1];
+    x = floor(*depth);
+    *depth -= x;
+    return STATIC_CAST(long, x);
+}
+
 double proton_line_get_dose(const ProtonDose *dose, double depth)
 {
-    long i;
-    depth = (depth - proton_dose_min_depth(dose)) / dose->px_spacing[1];
-    {
-        const double x = floor(depth);
-        depth -= x;
-        i = STATIC_CAST(long, x);
-    }
-    return (i > 0 && i < dose->nplanes) ? dose->linedose[i] + (dose->linedose[i + 1] - dose->linedose[i]) * depth : 0;
+    long i = proton_dose_1d_interp(dose, &depth);
+    return (i >= 0 && i < dose->nplanes) ? dose->linedose[i] + (dose->linedose[i + 1] - dose->linedose[i]) * depth : 0;
+}
+
+double proton_planes_get_dose(const ProtonDose *dose, double depth)
+{
+    long i = proton_dose_1d_interp(dose, &depth);
+    return (i >= 0 && i < dose->nplanes) ? dose->planes[i] + (dose->planes[i + 1] - dose->planes[i]) * depth : 0;
 }
 
 static void proton_dose_find_square(const ProtonDose *dose, long a[_q(static 2)],
@@ -177,9 +203,32 @@ void proton_dose_get_line(ProtonDose *dose, double x, double y)
     }
 }
 
-const float *proton_line_raw(const ProtonDose *dose)
+const float *proton_line_raw(const ProtonDose *dose, long *n)
 {
+    *n = dose->nplanes;
     return dose->linedose;
+}
+
+const float *proton_planes_raw(const ProtonDose *dose, long *n)
+{
+    *n = dose->nplanes;
+    return dose->planes;
+}
+
+/** Do NOT use fmax here, there will be no NaN or inf */
+static float maxf(float x, float y)
+{
+    return (x > y) ? x : y;
+}
+
+float proton_planes_max(const ProtonDose *dose)
+{
+    float res = 0.0;
+    long i;
+    for (i = 0; i < dose->nplanes; i++) {
+        res = maxf(res, dose->planes[i]);
+    }
+    return res;
 }
 
 long proton_line_length(const ProtonDose *dose)
@@ -247,7 +296,8 @@ ProtonDose *proton_dose_create(const char *filename)
         return NULL;
     }
     /** Allocate one extra point, set it to zero, and don't touch it. This
-     *  avoids the need for special fencepost code in the interpolator */
+     *  avoids the need for special fencepost code in the interpolator
+     *  (the planes are allocated with an additional 0.0 as well) */
     dose->linedose = malloc(sizeof *dose->linedose * (dose->nplanes + 1));
     if (!dose->linedose) {
         proton_dose_destroy(dose);
@@ -470,10 +520,7 @@ static void proton_dose_find_scan(const ProtonDose *dose, float *z,
     *z -= flz;
 }
 
-/** REWRITEME: Not urgent, mul and imul are at most 3 µops on the target 
- *  machines. Most of the affine transformations are completed with  
- *  fma and lea instructions anyway
- */
+/** REWRITEME: Not urgent */
 void proton_dose_get_plane(const ProtonDose *dose,
                            ProtonImage *img, float depth,
                            void (*colormap)(float, unsigned char *))

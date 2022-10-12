@@ -25,8 +25,7 @@ enum {
     DOSE_SI = 2     /* Axial direction */
 };
 
-/** Typedef'd because I want to use a C99 flexible array member
- *  I don't want to use the singleton array hack */
+/** Typedef'd because I want to use a C99 flexible array member */
 typedef struct _proton_dose ProtonDose;
 
 ProtonDose *proton_dose_create(const char *filename);
@@ -41,7 +40,7 @@ double proton_dose_width(const ProtonDose *dose, int dim);
 
 float proton_dose_max(const ProtonDose *dose);
 
-/** Writes the valid depth range [d0, d1) to the first two floats at range */
+/** Writes the valid depth range [d0, d1) to the first two floats at @p range */
 void proton_dose_depth_range(const ProtonDose *dose, float range[]);
 
 float proton_dose_coronal_aspect(const ProtonDose *dose);
@@ -53,9 +52,16 @@ double proton_line_get_dose(const ProtonDose *dose, double depth);
 /** Interpolates the line dose at (x, y) onto the linedose array in @c dose */
 void proton_dose_get_line(ProtonDose *dose, double x, double y);
 
-const float *proton_line_raw(const ProtonDose *dose);
-long proton_line_length(const ProtonDose *dose);
+const float *proton_line_raw(const ProtonDose *dose, long *n);
+const float *proton_planes_raw(const ProtonDose *dose, long *n);
 
+/** WARNING: This value is NOT stored in the dose struct, so this function
+ *  COMPUTES the result! */
+float proton_planes_max(const ProtonDose *dose);
+
+double proton_planes_get_dose(const ProtonDose *dose, double depth);
+
+long proton_line_length(const ProtonDose *dose);
 
 /** TODO: Add colormap to the image structure? This would make it easier 
  *  to swap them at runtime */

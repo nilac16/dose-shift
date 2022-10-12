@@ -3,27 +3,6 @@
 #include "../main-window.h"
 #include <cmath>
 
-#ifndef M_PI_2 /* Since nobody but glibc wants to #def this */
-#   define M_PI_2		1.57079632679489661923	/* pi/2 */
-#endif
-
-#define DOSEMAX_MULT    1.0
-#define DEPTHMAX_MULT   1.1
-
-#define GRID_OPACITY        0.2
-#define LINEDOSE_OPACITY    0.8
-
-#define MIN_XTICKS      9
-#define MIN_YTICKS      9
-
-#define IMAGE_AXFONT_SIZE  20
-#define IMAGE_TIKFONT_SIZE 14
-
-
-static const wxString xlabel = wxT("Depth (mm)");
-static const wxString ylabel = wxT("Dose (Gy)");
-static const wxString plabel = wxT("% Dose difference");
-
 static const std::array<wxString, 4> plbls = {
     wxT("-3"), wxT("-2"), wxT(" 2"), wxT(" 3") };
 
@@ -76,7 +55,7 @@ void LineDosePlot::draw_measurements(wxGraphicsContext *gc, struct plot_context 
     const double dosescale = ctx->width.m_y / yticks.back();
     const double depthscale = ctx->width.m_x / static_cast<double>(xticks.back().second);
     gc->SetPen(measpen);
-    if (ctx->measurements.empty()) {
+    if (measurements.empty()) {
         /* Draw a line at the currently drawn depth */
         const double depth = wxGetApp().get_depth();
         const double x = std::fma(depth, depthscale, ctx->origin.m_x);
@@ -85,21 +64,20 @@ void LineDosePlot::draw_measurements(wxGraphicsContext *gc, struct plot_context 
     } else {
         const double dcenter = std::fma(0.5, ctx->width.m_y, ctx->origin.m_y);
         const double dscale = 5.0 * ctx->width.m_y;
-        for (std::pair<double, double> &meas : ctx->measurements) {
-            const double x = std::fma(meas.first, depthscale, ctx->origin.m_x);
-            const double y = std::fma(meas.second, dosescale, ctx->origin.m_y);
-            const double mdose = proton_line_get_dose(wxGetApp().get_dose(), meas.first);
+        for (auto &[depth, dose, _] : measurements) {
+            const double x = std::fma(depth, depthscale, ctx->origin.m_x);
+            const double y = std::fma(dose, dosescale, ctx->origin.m_y);
+            const double mdose = proton_line_get_dose(wxGetApp().get_dose(), depth);
             gc->DrawRectangle(
                 std::fma(-0.5, ctx->boxwidth, x),
                 std::fma(-0.5, ctx->boxwidth, y),
                 ctx->boxwidth, ctx->boxwidth);
-            meas.second = (meas.second - mdose) / mdose;
-            meas.first = x;
+            dose = (dose - mdose) / mdose;
+            depth = x;
         }
         gc->SetPen(diffpen);
-        for (const std::pair<double, double> &meas : ctx->measurements) {
-            const double x = meas.first;
-            const double y = std::fma(meas.second, dscale, dcenter);/* ctx->origin.m_y + 0.5 * ctx->width.m_y + 5 * ctx->width.m_y * meas.second; */
+        for (const auto &[x, dose, _] : measurements) {
+            const double y = std::fma(dose, dscale, dcenter);/* ctx->origin.m_y + 0.5 * ctx->width.m_y + 5 * ctx->width.m_y * meas.second; */
             gc->DrawEllipse(
                 std::fma(-0.5, ctx->boxwidth, x),
                 std::fma(-0.5, ctx->boxwidth, y),
@@ -113,9 +91,10 @@ void LineDosePlot::draw_line_dose(wxGraphicsContext *gc, const struct plot_conte
     const double dosescale = ctx->width.m_y / yticks.back();
     const double depthscale = ctx->width.m_x * proton_dose_spacing(wxGetApp().get_dose(), 1) / static_cast<double>(xticks.back().second);
     const double depthorig = std::fma(depthscale, 0.5, ctx->origin.m_x);
-    const float *ld = proton_line_raw(wxGetApp().get_dose());
+    const float *ld;
     wxGraphicsPath p = gc->CreatePath();
-    long i;
+    long i, n;
+    ld = proton_line_raw(wxGetApp().get_dose(), &n);
     gc->SetPen(dosepen);
     p.MoveToPoint(depthorig, std::fma(static_cast<double>(*ld), dosescale, ctx->origin.m_y));
     ld++;
@@ -263,7 +242,7 @@ void LineDosePlot::initialize_plot_context(wxGraphicsContext *gc, struct plot_co
             wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
     }
 
-    ctx->tikwidth = (ctx->width.m_x < ctx->width.m_y) ? ctx->width.m_x : ctx->width.m_y;
+    ctx->tikwidth = std::min(ctx->width.m_x, ctx->width.m_y);
     ctx->tikwidth *= 0.01;
 
     ctx->maxxheight = ctx->maxywidth = ctx->maxpwidth = 0.0;
@@ -298,7 +277,6 @@ void LineDosePlot::initialize_plot_context(wxGraphicsContext *gc, struct plot_co
 
     ctx->ytikscale = ctx->width.m_y / static_cast<double>(yticks.size() - 1);
     ctx->boxwidth = pmean * 0.01;
-    wxGetApp().get_measurements(ctx->measurements);
 }
 
 void LineDosePlot::draw_plot(wxGraphicsContext *gc)
@@ -310,88 +288,38 @@ void LineDosePlot::draw_plot(wxGraphicsContext *gc)
     gc->SetBrush(*wxWHITE_BRUSH);
     gc->DrawRectangle(0.0, 0.0, ctx.width.m_x, ctx.width.m_y);
     initialize_plot_context(gc, &ctx);
+    wxGetApp().get_measurements(measurements);
 
     /* Prepare for drawing axes */
     gc->SetBrush(wxNullBrush);
     gc->SetPen(*wxBLACK_PEN);
     draw_xaxis(gc, &ctx);
     draw_yaxis(gc, &ctx);
-    if (!ctx.measurements.empty()) {
+    if (!measurements.empty()) {
         draw_paxis(gc, &ctx);
     }
     gc->Clip(ctx.origin.m_x, ctx.origin.m_y, ctx.width.m_x, ctx.width.m_y);
     draw_dashes(gc, &ctx);
     draw_line_dose(gc, &ctx);
     draw_measurements(gc, &ctx);
-    if (!ctx.measurements.empty()) {
+    if (!measurements.empty()) {
         draw_legend(gc, &ctx);
     }
 }
 
 void LineDosePlot::write_xaxis()
 {
-    constexpr std::array<long, 7> tikdivs = { 100, 50, 20, 10, 5, 2, 1 };
-    const long maxdepth = static_cast<long>(wxGetApp().get_max_slider_depth());
-    double tikinc;
-    long div = 0, i;
-    ldiv_t res;
-    for (const long tdiv : tikdivs) {
-        res = ldiv(maxdepth, tdiv);
-        if (res.quot > MIN_XTICKS) {
-            div = tdiv;
-            break;
-        }
-    }
-    if (div) {
-        const double xtra = static_cast<double>(res.rem) / static_cast<double>(maxdepth);
-        tikinc = (1.0 - xtra) / static_cast<double>(res.quot);
-    } else [[unlikely]] {
-        /* Is this even possible? */
-        xticks.clear();
-        return;
-    }
-    xticks.resize(res.quot + 1);
-    xticklabels.resize(res.quot + 1);
-    for (i = 0; i <= res.quot; i++) {
-        xticks[i].first = static_cast<double>(i) * tikinc;
-        xticks[i].second = i * div;
-        xticklabels[i].Printf(wxT("%li"), xticks[i].second);
-    }
-    if (res.rem) {
-        xticks.push_back(std::pair(1.0, maxdepth));
-    }
+    write_depth_axis();
 }
 
 void LineDosePlot::write_yaxis()
 {
-    constexpr long nticks = MIN_YTICKS;
-    const double maxdose = DOSEMAX_MULT * wxGetApp().get_max_dose();
-    const double doseinc = maxdose / static_cast<double>(nticks - 1);
-    long i;
-    yticks.resize(nticks);
-    yticklabels.resize(nticks);
-    for (i = 0; i < nticks; i++) {
-        yticks[i] = static_cast<double>(i) * doseinc;
-        yticklabels[i].Printf(wxT("%.2f"), yticks[i]);
-    }
+    write_dose_axis(DOSEMAX_MULT * wxGetApp().get_max_dose());
 }
 
 LineDosePlot::LineDosePlot(wxWindow *parent):
-    ProtonPlot(parent),
-    dosecolor(60, 160, 100),
-    meascolor(60, 60, 190),
-    diffcolor(200, 50, 20),
-    dashpen(wxColour(200, 200, 200), 1, wxPENSTYLE_DOT),
-    dosepen(dosecolor, 2, wxPENSTYLE_SOLID),
-    measpen(meascolor, 1, wxPENSTYLE_SOLID),
-    diffpen(diffcolor, 1, wxPENSTYLE_SOLID),
-    diffpendashed(diffcolor, 1, wxPENSTYLE_SHORT_DASH)
+    ProtonPlot(parent, DEPTH_AXLABEL, DOSE_AXLABEL),
+    plabel(PDIFF_AXLABEL)
 {
     
-}
-
-void LineDosePlot::write_axes()
-{
-    write_xaxis();
-    write_yaxis();
 }

@@ -102,9 +102,7 @@ bool rtdose_get_dose_data(RTDose *dcm, const long dim[], float *dptr, float *dma
         it = plane.begin();
         do {
             *dptr = static_cast<float>(*it);
-            if (*dptr > *dmax) {
-                *dmax = *dptr;
-            }
+            *dmax = (std::max)(*dmax, *dptr);
             dptr++;
             ++it;
             N--;
