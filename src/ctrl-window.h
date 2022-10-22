@@ -30,7 +30,9 @@ public:
     void get_line_dose(double *x, double *y) const noexcept;
     void set_line_dose(double x, double y);
 
-    void get_measurements(std::vector<std::tuple<double, double, double>> &meas) const;
+    inline void get_ld_measurements(std::vector<std::tuple<double, double>> &meas) const { pcon->get_ld_measurements(meas); }
+    inline void get_pd_measurements(std::vector<std::tuple<double, double>> &meas) const { pcon->get_pd_measurements(meas); }
+    inline void get_sp_measurements(std::vector<std::tuple<double, double>> &meas) const { pcon->get_sp_measurements(meas); }
 
     /** Converts the RS does coordinates to MCC dose coordinates */
     void convert_coordinates(double *x, double *y) const noexcept;

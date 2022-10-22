@@ -139,11 +139,6 @@ void MainApplication::unload_dose() noexcept
     canv->unload_dose();
 }
 
-void MainApplication::get_measurements(std::vector<std::tuple<double, double, double>> &meas) const
-{
-    cwnd->get_measurements(meas);
-}
-
 wxString MainApplication::get_RS_directory() const
 {
     return lwnd->get_directory();
@@ -171,4 +166,10 @@ bool MainApplication::OnInit()
         wxMessageBox(str, wxT("Init failed"), wxICON_ERROR);
         return false;
     }
+}
+
+
+extern "C" double MAXDOSE_EXTERN(void)
+{
+    return wxGetApp().get_max_dose();
 }

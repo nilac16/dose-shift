@@ -45,7 +45,10 @@ public:
 
     void unload_dose() noexcept;
 
-    void get_measurements(std::vector<std::tuple<double, double, double>> &meas) const;
+    inline void get_ld_measurements(std::vector<std::tuple<double, double>> &meas) const { cwnd->get_ld_measurements(meas); }
+    inline void get_pd_measurements(std::vector<std::tuple<double, double>> &meas) const { cwnd->get_pd_measurements(meas); }
+    inline void get_sp_measurements(std::vector<std::tuple<double, double>> &meas) const { cwnd->get_sp_measurements(meas); }
+
     wxString get_RS_directory() const;
 
     void convert_coordinates(double *x, double *y) const noexcept;

@@ -7,8 +7,7 @@
 
 
 class LineDosePlot : public ProtonPlot {
-    const wxString plabel;
-
+    
     void draw_legend(wxGraphicsContext *gc, const struct plot_context *ctx);
     void draw_measurements(wxGraphicsContext *gc, struct plot_context *ctx);
     void draw_line_dose(wxGraphicsContext *gc, const struct plot_context *ctx);

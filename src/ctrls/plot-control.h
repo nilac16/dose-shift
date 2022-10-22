@@ -34,7 +34,8 @@ public:
     constexpr bool is_loaded() const noexcept { return data != nullptr; }
     double get_dose(double x, double y) const noexcept;
     constexpr double get_depth() const noexcept { return depth; }
-    double get_integrated_dose() const noexcept;
+    double get_sum() const noexcept;
+    long get_supp() const noexcept;
 };
 
 
@@ -55,7 +56,10 @@ public:
     void get_point(double *x, double *y) const noexcept;
     void set_point(double x, double y);
 
-    void get_measurements(std::vector<std::tuple<double, double, double>> &meas) const;
+    void get_ld_measurements(std::vector<std::tuple<double, double>> &meas) const;
+    /** YOU **MUST** REWRITE vv THIS vv **/
+    void get_pd_measurements(std::vector<std::tuple<double, double>> &meas) const;
+    void get_sp_measurements(std::vector<std::tuple<double, double>> &meas) const;
 };
 
 

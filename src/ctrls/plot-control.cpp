@@ -3,6 +3,7 @@
 #include "../main-window.h"
 #include <wx/filename.h>
 #include <wx/valnum.h>
+#include <map>
 
 wxDEFINE_EVENT(EVT_PLOT_CONTROL, wxCommandEvent);
 wxDEFINE_EVENT(EVT_PLOT_OPEN, wxCommandEvent);
@@ -108,9 +109,14 @@ double PlotMeasurement::get_dose(double x, double y) const noexcept
     return mcc_data_get_point_dose(data, x, y);
 }
 
-double PlotMeasurement::get_integrated_dose() const noexcept
+double PlotMeasurement::get_sum() const noexcept
 {
-    return mcc_data_get_integrated_dose(data);
+    return mcc_data_get_sum(data);
+}
+
+long PlotMeasurement::get_supp() const noexcept
+{
+    return mcc_data_get_supp(data);
 }
 
 void PlotControl::post_change_event()
@@ -193,14 +199,45 @@ void PlotControl::set_point(double x, double y)
     post_change_event();
 }
 
-void PlotControl::get_measurements(std::vector<std::tuple<double, double, double>> &meas) const
+void PlotControl::get_ld_measurements(std::vector<std::tuple<double, double>> &meas) const
 {
     double mccx = this->x, mccy = this->y;
     wxGetApp().convert_coordinates(&mccx, &mccy);
     meas.clear();
     for (const PlotMeasurement *p : measurements) {
         if (p->is_loaded()) {
-            meas.push_back({p->get_depth(), p->get_dose(mccx, mccy), p->get_integrated_dose()});
+            meas.push_back({p->get_depth(), p->get_dose(mccx, mccy)});
+        }
+    }
+}
+
+void PlotControl::get_pd_measurements(std::vector<std::tuple<double, double>> &meas) const
+/* wew lad, this function is FUKd */
+{
+    std::map<double, std::vector<std::pair<double, long>>> map;
+    meas.clear();
+    for (const PlotMeasurement *p : measurements) {
+        if (p->is_loaded()) {
+            map[p->get_depth()].push_back({p->get_sum(), p->get_supp()});
+        }
+    }
+    for (const auto &[depth, ints] : map) {
+        double x = 0.0;
+        long y = 0;
+        for (auto [sum, supp] : ints) {
+            x += sum;
+            y += supp;
+        }
+        meas.push_back({depth, x / static_cast<double>(y)});
+    }
+}
+
+void PlotControl::get_sp_measurements(std::vector<std::tuple<double, double>> &meas) const
+{
+    meas.clear();
+    for (const PlotMeasurement *p : measurements) {
+        if (p->is_loaded()) {
+            meas.push_back({p->get_depth(), p->get_sum() * ((0.27 * 0.27) * 1e3 / 1405.)});
         }
     }
 }

@@ -15,11 +15,11 @@ void ProtonPlot::write_depth_axis()
 {
     constexpr std::array<long, 7> tikdivs = { 100, 50, 20, 10, 5, 2, 1 };
     const long maxdepth = static_cast<long>(wxGetApp().get_max_slider_depth());
-    double tikinc;
     long div = 0, i;
-    ldiv_t res;
+    double tikinc;
+    std::ldiv_t res;
     for (const long tdiv : tikdivs) {
-        res = ldiv(maxdepth, tdiv);
+        res = std::ldiv(maxdepth, tdiv);
         if (res.quot > MIN_XTICKS) {
             div = tdiv;
             break;
@@ -36,16 +36,15 @@ void ProtonPlot::write_depth_axis()
     xticks.resize(res.quot + 1);
     xticklabels.resize(res.quot + 1);
     for (i = 0; i <= res.quot; i++) {
-        xticks[i].first = static_cast<double>(i) * tikinc;
-        xticks[i].second = i * div;
+        xticks[i] = { static_cast<double>(i) * tikinc, i * div };
         xticklabels[i].Printf(wxT("%li"), xticks[i].second);
     }
     if (res.rem) {
-        xticks.push_back(std::pair(1.0, maxdepth));
+        xticks.push_back({1.0, maxdepth});
     }
 }
 
-void ProtonPlot::write_dose_axis(const double limit)
+void ProtonPlot::write_dose_axis(const double limit, const wxString &fmt)
 {
     constexpr long nticks = MIN_YTICKS;
     const double doseinc = limit / static_cast<double>(nticks - 1);
@@ -54,11 +53,11 @@ void ProtonPlot::write_dose_axis(const double limit)
     yticklabels.resize(nticks);
     for (i = 0; i < nticks; i++) {
         yticks[i] = static_cast<double>(i) * doseinc;
-        yticklabels[i].Printf(wxT("%.2f"), yticks[i]);
+        yticklabels[i].Printf(fmt, yticks[i]);
     }
 }
 
-ProtonPlot::ProtonPlot(wxWindow *parent, const wxString &xlabel, const wxString &ylabel):
+ProtonPlot::ProtonPlot(wxWindow *parent, const wxString &xlabel, const wxString &ylabel, const wxString &plabel):
     wxWindow(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxFULL_REPAINT_ON_RESIZE),
     dosecolor(60, 160, 100),
     meascolor(60, 60, 190),
@@ -68,7 +67,7 @@ ProtonPlot::ProtonPlot(wxWindow *parent, const wxString &xlabel, const wxString 
     measpen(meascolor, 1, wxPENSTYLE_SOLID),
     diffpen(diffcolor, 1, wxPENSTYLE_SOLID),
     diffpendashed(diffcolor, 1, wxPENSTYLE_SHORT_DASH),
-    xlabel(xlabel), ylabel(ylabel)
+    xlabel(xlabel), ylabel(ylabel), plabel(plabel)
 {
     this->Bind(wxEVT_PAINT, &ProtonPlot::on_evt_paint, this);
 

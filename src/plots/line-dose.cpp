@@ -64,7 +64,7 @@ void LineDosePlot::draw_measurements(wxGraphicsContext *gc, struct plot_context 
     } else {
         const double dcenter = std::fma(0.5, ctx->width.m_y, ctx->origin.m_y);
         const double dscale = 5.0 * ctx->width.m_y;
-        for (auto &[depth, dose, _] : measurements) {
+        for (auto &[depth, dose] : measurements) {
             const double x = std::fma(depth, depthscale, ctx->origin.m_x);
             const double y = std::fma(dose, dosescale, ctx->origin.m_y);
             const double mdose = proton_line_get_dose(wxGetApp().get_dose(), depth);
@@ -76,7 +76,7 @@ void LineDosePlot::draw_measurements(wxGraphicsContext *gc, struct plot_context 
             depth = x;
         }
         gc->SetPen(diffpen);
-        for (const auto &[x, dose, _] : measurements) {
+        for (const auto &[x, dose] : measurements) {
             const double y = std::fma(dose, dscale, dcenter);/* ctx->origin.m_y + 0.5 * ctx->width.m_y + 5 * ctx->width.m_y * meas.second; */
             gc->DrawEllipse(
                 std::fma(-0.5, ctx->boxwidth, x),
@@ -93,8 +93,8 @@ void LineDosePlot::draw_line_dose(wxGraphicsContext *gc, const struct plot_conte
     const double depthorig = std::fma(depthscale, 0.5, ctx->origin.m_x);
     const float *ld;
     wxGraphicsPath p = gc->CreatePath();
-    long i, n;
-    ld = proton_line_raw(wxGetApp().get_dose(), &n);
+    long i;
+    ld = proton_line_raw(wxGetApp().get_dose());
     gc->SetPen(dosepen);
     p.MoveToPoint(depthorig, std::fma(static_cast<double>(*ld), dosescale, ctx->origin.m_y));
     ld++;
@@ -288,7 +288,7 @@ void LineDosePlot::draw_plot(wxGraphicsContext *gc)
     gc->SetBrush(*wxWHITE_BRUSH);
     gc->DrawRectangle(0.0, 0.0, ctx.width.m_x, ctx.width.m_y);
     initialize_plot_context(gc, &ctx);
-    wxGetApp().get_measurements(measurements);
+    wxGetApp().get_ld_measurements(measurements);
 
     /* Prepare for drawing axes */
     gc->SetBrush(wxNullBrush);
@@ -314,12 +314,11 @@ void LineDosePlot::write_xaxis()
 
 void LineDosePlot::write_yaxis()
 {
-    write_dose_axis(DOSEMAX_MULT * wxGetApp().get_max_dose());
+    write_dose_axis(DOSEMAX_MULT * wxGetApp().get_max_dose(), wxT("%.2f"));
 }
 
 LineDosePlot::LineDosePlot(wxWindow *parent):
-    ProtonPlot(parent, DEPTH_AXLABEL, DOSE_AXLABEL),
-    plabel(PDIFF_AXLABEL)
+    ProtonPlot(parent, DEPTH_AXLABEL, DOSE_AXLABEL, PDIFF_AXLABEL)
 {
     
 }

@@ -1,12 +1,5 @@
 #pragma once
-/** This library could potentially be improved by inlining some of the 
- *  trivial calls. Since the objects use C99 flexible arrays, this would 
- *  require some type punning in the header, with any accesses to the flex 
- *  array done from the source file
- *  TODO: Determine how many scopes make only trivial calls to this lib
- *        I am not doing a drastic rewrite to make a handful of functions 
- *        leaf calls
- */
+
 #ifndef PROTON_DOSE_H
 #define PROTON_DOSE_H
 
@@ -25,20 +18,35 @@ enum {
     DOSE_SI = 2     /* Axial direction */
 };
 
-/** Typedef'd because I want to use a C99 flexible array member */
-typedef struct _proton_dose ProtonDose;
+
+typedef struct _proton_dose {
+    /* Everything in this section must be extracted from the DICOM */    
+    double top_left[3];
+    double px_spacing[3];
+    long px_dimensions[3];
+
+    /* Everything in this section (except data) is derived from the above */
+    long nplanes;
+    float *planes, *stppwr, *linedose;
+    float dmax;
+
+#if !defined(__cplusplus) || !__cplusplus
+    float data[];
+#endif
+} ProtonDose;
+
 
 ProtonDose *proton_dose_create(const char *filename);
 void proton_dose_destroy(ProtonDose *dose);
 
-double proton_dose_origin(const ProtonDose *dose, int dim);
-double proton_dose_spacing(const ProtonDose *dose, int dim);
-long proton_dose_dimension(const ProtonDose *dose, int dim);
+inline double proton_dose_origin(const ProtonDose *dose, int dim) { return dose->top_left[dim]; }
+inline double proton_dose_spacing(const ProtonDose *dose, int dim) { return dose->px_spacing[dim]; }
+inline long proton_dose_dimension(const ProtonDose *dose, int dim) { return dose->px_dimensions[dim]; }
 
 /** Distance between the bounding PIXELS */
 double proton_dose_width(const ProtonDose *dose, int dim);
 
-float proton_dose_max(const ProtonDose *dose);
+inline float proton_dose_max(const ProtonDose *dose) { return dose->dmax; }
 
 /** Writes the valid depth range [d0, d1) to the first two floats at @p range */
 void proton_dose_depth_range(const ProtonDose *dose, float range[]);
@@ -52,29 +60,39 @@ double proton_line_get_dose(const ProtonDose *dose, double depth);
 /** Interpolates the line dose at (x, y) onto the linedose array in @c dose */
 void proton_dose_get_line(ProtonDose *dose, double x, double y);
 
-const float *proton_line_raw(const ProtonDose *dose, long *n);
-const float *proton_planes_raw(const ProtonDose *dose, long *n);
+inline const float *proton_line_raw(const ProtonDose *dose) { return dose->linedose; }
+inline const float *proton_planes_raw(const ProtonDose *dose) { return dose->planes; }
+inline const float *proton_stppwr_raw(const ProtonDose *dose) { return dose->stppwr; }
 
 /** WARNING: This value is NOT stored in the dose struct, so this function
  *  COMPUTES the result! */
 float proton_planes_max(const ProtonDose *dose);
+float proton_stppwr_max(const ProtonDose *dose);
 
 double proton_planes_get_dose(const ProtonDose *dose, double depth);
+double proton_stppwr_get_dose(const ProtonDose *dose, double depth);
 
-long proton_line_length(const ProtonDose *dose);
+inline long proton_line_length(const ProtonDose *dose) { return dose->nplanes; }
 
-/** TODO: Add colormap to the image structure? This would make it easier 
- *  to swap them at runtime */
 
-typedef struct _proton_image ProtonImage;
+typedef struct _proton_image {
+    long dim[2];
+    long bufwidth;
+    
+#if !defined(__cplusplus) || !__cplusplus
+    unsigned char buf[];
+#endif
+} ProtonImage;
+
 
 bool proton_image_realloc(ProtonImage **img, long width, long height);
 void proton_image_destroy(ProtonImage *img);
 
-long proton_image_dimension(const ProtonImage *img, int dim);
+inline long proton_image_dimension(const ProtonImage *img, int dim) { return img->dim[dim]; }
 unsigned char *proton_image_raw(ProtonImage *img);
 
-bool proton_image_empty(const ProtonImage *img);
+/** Should this be inline? */
+inline bool proton_image_empty(const ProtonImage *img) { return img->dim[0] == 0 || img->dim[1] == 0; }
 
 /** Interpolates the dose grid onto the 2D buffer at @p img */
 void proton_dose_get_plane(const ProtonDose *dose,

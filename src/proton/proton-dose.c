@@ -21,71 +21,76 @@
 If all dose values are less than this, it is empty */
 #define NULL_THRESH 0.0001
 
-/** TODO: Rewrite the cell interpolator: create functions for some of its
- *  branches (SEE BELOW) */
+#define EVQ 1.602176634e-19
 
 
-struct _proton_dose {
-    /* Everything in this section must be extracted from the DICOM */    
-    double top_left[3];
-    double px_spacing[3];
-    long px_dimensions[3];
-
-    /* Everything in this section (except data) is derived from the above */
-    long nplanes;
-    float *planes, *linedose;
-    float dmax, data[];
-};
+static float maxf(float x, float y)
+{
+    return (x > y) ? x : y;
+}
 
 
 /* ---------------------------------------------------------------------- */
 /*                                 Planes                                 */
 /* ---------------------------------------------------------------------- */
 
-static float proton_planes_linesum(const float *fptr, const float *const end)
-{
-    float acc = 0.0;
-    do {
-        acc += *fptr;
-    } while (++fptr < end);
-    return acc;
-}
-
 static float proton_planes_lebesgue_dose(const ProtonDose *dose)
 {
     /** Constant measure
      *  Consists of:
      *    - Area of a coronal slice (in m²)
-     *    - Density of water (1000 kg m⁻³)
-     *    - Conversion of joules to kilojoules
-     *  The last two points cancel
+     *    - Density of water (10³ kg m⁻³)
      */
-    return (dose->px_spacing[0] * dose->px_spacing[2]) * 1e-4;
+    return STATIC_CAST(double,
+        (dose->px_spacing[0] * dose->px_spacing[2]) * 1e-3);
 }
 
 static void proton_planes_integrate(ProtonDose *dose)
 {
-    const float dmeasure = proton_planes_lebesgue_dose(dose);
     const float *f1 = dose->data, *f2 = dose->data + dose->px_dimensions[0];
+    float *pmax = calloc(dose->px_dimensions[1], sizeof *pmax);
+    long *nsupp = calloc(dose->px_dimensions[1], sizeof *nsupp);
     long j, k;
+    /* Raw sum and compute planar maxima */
     for (k = 0; k < dose->px_dimensions[2]; k++) {
         for (j = 0; j < dose->px_dimensions[1]; j++) {
-            dose->planes[j] += proton_planes_linesum(f1, f2);
-            f1 = f2;
+            do {
+                dose->planes[j] += *f1;
+                pmax[j] = maxf(pmax[j], *f1);
+            } while (++f1 < f2);
+            f2 += dose->px_dimensions[0];
+        }
+    }
+    /* Compute threshold from planar maxima */
+    for (j = 0; j < dose->px_dimensions[1]; j++) {
+        pmax[j] *= 0.1f;
+    }
+    /* Compute measure of supported regions */
+    f1 = dose->data;
+    f2 = f1 + dose->px_dimensions[0];
+    for (k = 0; k < dose->px_dimensions[2]; k++) {
+        for (j = 0; j < dose->px_dimensions[1]; j++) {
+            do {
+                nsupp[j] += *f1 > pmax[j];
+            } while (++f1 < f2);
             f2 += dose->px_dimensions[0];
         }
     }
     for (j = 0; j < dose->px_dimensions[1]; j++) {
-        dose->planes[j] *= dmeasure;
+        dose->stppwr[j] = dose->planes[j] * proton_planes_lebesgue_dose(dose);
+        dose->planes[j] = (nsupp[j]) ? dose->planes[j] / (float)nsupp[j] : 0.0f;
     }
+    free(nsupp);
+    free(pmax);
 }
 
 static void proton_planes_constrict(ProtonDose *dose)
 {
+    const float threshold = STATIC_CAST(double, NULL_THRESH * dose->dmax);
     void *testptr;
     long i, end;
     for (i = end = 0; i < dose->px_dimensions[1]; i++) {
-        end = (dose->planes[i] > NULL_THRESH) ? i : end;
+        end = (dose->planes[i] > threshold) ? i : end;
     }
     testptr = realloc(dose->planes, sizeof *dose->planes * (++end + 1));
     if (testptr) {
@@ -102,6 +107,7 @@ static void proton_planes_constrict(ProtonDose *dose)
 static void proton_planes_create(ProtonDose *dose)
 {
     dose->planes = calloc(dose->px_dimensions[1], sizeof *dose->planes);
+    dose->stppwr = calloc(dose->px_dimensions[1], sizeof *dose->stppwr);
     if (dose->planes) {
         proton_planes_integrate(dose);
         proton_planes_constrict(dose);
@@ -144,6 +150,12 @@ double proton_planes_get_dose(const ProtonDose *dose, double depth)
 {
     long i = proton_dose_1d_interp(dose, &depth);
     return (i >= 0 && i < dose->nplanes) ? dose->planes[i] + (dose->planes[i + 1] - dose->planes[i]) * depth : 0;
+}
+
+double proton_stppwr_get_dose(const ProtonDose *dose, double depth)
+{
+    long i = proton_dose_1d_interp(dose, &depth);
+    return (i >= 0 && i < dose->nplanes) ? dose->stppwr[i] + (dose->stppwr[i + 1] - dose->stppwr[i]) * depth : 0;
 }
 
 static void proton_dose_find_square(const ProtonDose *dose, long a[_q(static 2)],
@@ -203,37 +215,23 @@ void proton_dose_get_line(ProtonDose *dose, double x, double y)
     }
 }
 
-const float *proton_line_raw(const ProtonDose *dose, long *n)
+static float array_maxf(long n, float arr[_q(static n)])
 {
-    *n = dose->nplanes;
-    return dose->linedose;
-}
-
-const float *proton_planes_raw(const ProtonDose *dose, long *n)
-{
-    *n = dose->nplanes;
-    return dose->planes;
-}
-
-/** Do NOT use fmax here, there will be no NaN or inf */
-static float maxf(float x, float y)
-{
-    return (x > y) ? x : y;
+    float res = 0.0f;
+    do {
+        res = maxf(res, *arr++);
+    } while (--n);
+    return res;
 }
 
 float proton_planes_max(const ProtonDose *dose)
 {
-    float res = 0.0;
-    long i;
-    for (i = 0; i < dose->nplanes; i++) {
-        res = maxf(res, dose->planes[i]);
-    }
-    return res;
+    return array_maxf(dose->nplanes, dose->planes);
 }
 
-long proton_line_length(const ProtonDose *dose)
+float proton_stppwr_max(const ProtonDose *dose)
 {
-    return dose->nplanes;
+    return array_maxf(dose->nplanes, dose->stppwr);
 }
 
 
@@ -312,33 +310,14 @@ void proton_dose_destroy(ProtonDose *dose)
     if (dose) {
         free(dose->planes);
         free(dose->linedose);
+        free(dose->stppwr);
         free(dose);
     }
-}
-
-double proton_dose_origin(const ProtonDose *dose, int dim)
-{
-    return dose->top_left[dim];
-}
-
-double proton_dose_spacing(const ProtonDose *dose, int dim)
-{
-    return dose->px_spacing[dim];
-}
-
-long proton_dose_dimension(const ProtonDose *dose, int dim)
-{
-    return dose->px_dimensions[dim];
 }
 
 double proton_dose_width(const ProtonDose *dose, int dim)
 {
     return STATIC_CAST(double, dose->px_dimensions[dim]) * dose->px_spacing[dim];
-}
-
-float proton_dose_max(const ProtonDose *dose)
-{
-    return dose->dmax;
 }
 
 void proton_dose_depth_range(const ProtonDose *dose, float range[_q(static 2)])
@@ -357,12 +336,6 @@ float proton_dose_coronal_aspect(const ProtonDose *dose)
 /*                                 Image                                  */
 /* ---------------------------------------------------------------------- */
 
-
-struct _proton_image {
-    long dim[2];
-    long bufwidth;
-    unsigned char buf[];
-};
 
 static ProtonImage *proton_image_flexible_alloc(long N)
 {
@@ -397,19 +370,9 @@ void proton_image_destroy(ProtonImage *img)
     free(img);
 }
 
-long proton_image_dimension(const ProtonImage *img, int dim)
-{
-    return img->dim[dim];
-}
-
 unsigned char *proton_image_raw(ProtonImage *img)
 {
     return img->buf;
-}
-
-bool proton_image_empty(const ProtonImage *img)
-{
-    return (img->dim[0] == 0) || (img->dim[1] == 0);
 }
 
 static void proton_dose_load_interpolant(float interp[_q(static 4)],

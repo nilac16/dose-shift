@@ -14,6 +14,7 @@ class PlanarDosePlot : public ProtonPlot {
 
     void draw_xaxis(wxGraphicsContext *gc, const struct plot_context *ctx);
     void draw_yaxis(wxGraphicsContext *gc, const struct plot_context *ctx);
+    void draw_paxis(wxGraphicsContext *gc, const struct plot_context *ctx);
 
     void initialize_plot_context(wxGraphicsContext *gc, struct plot_context *ctx);
 

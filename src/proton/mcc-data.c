@@ -19,6 +19,8 @@ typedef int (*__compar_fn_t)(const void *, const void *);
 #define INIT_DATACAP 128
 #define LINEBUFSZ 512
 
+#define EVQ 1.602176634e-19
+
 
 const char *mcc_get_error(int err)
 {
@@ -38,6 +40,7 @@ const char *mcc_get_error(int err)
 
 struct _mcc_data {
     unsigned int sz, _cap;
+    long nsupp;
     double sum;
     struct mcc_scan {
         unsigned int sz, _cap;
@@ -460,23 +463,36 @@ static void mcc_data_sort(MCCData *data)
     }
 }
 
-static double mcc_data_lebesgue_dose(const MCCData *data)
+static double maxf(double x, double y)
 {
-    /* Each detector is 4.4 x 4.4[ x 3] mm³ (from PTW's website) */
-    return 27 * 27 * 1e-2 / 1405;
+    return (x > y) ? x : y;
+}
+
+static double mcc_data_threshold(MCCData *data)
+{
+    double max = 0.0;
+    unsigned i, j;
+    for (j = 0; j < data->sz; j++) {
+        for (i = 0; i < data->scans[j]->sz; i++) {
+            max = maxf(max, data->scans[j]->data[i].dose);
+        }
+    }
+    return 0.1 * max;
 }
 
 static void mcc_data_integrate(MCCData *data)
 {
-    const double dmeasure = mcc_data_lebesgue_dose(data);
+    const double threshold = mcc_data_threshold(data);
     unsigned i, j;
     data->sum = 0.0;
+    data->nsupp = 0;
     for (j = 0; j < data->sz; j++) {
         for (i = 0; i < data->scans[j]->sz; i++) {
-            data->sum += data->scans[j]->data[i].dose;
+            double dose = data->scans[j]->data[i].dose;
+            data->sum += dose;
+            data->nsupp += dose > threshold;
         }
     }
-    data->sum *= dmeasure;
 }
 
 static MCCData *mcc_data_alloc(FILE *mcc, int *stat)
@@ -496,7 +512,6 @@ static MCCData *mcc_data_alloc(FILE *mcc, int *stat)
     data = mcc_data_trim(data, env);
     mcc_data_sort(data);
     mcc_data_integrate(data);
-    printf("Integrated (summed) MCC dose is %g (Gy?)\n", data->sum);
     return data;
 }
 
@@ -635,7 +650,12 @@ double mcc_data_get_point_dose(const MCCData *data, double x, double y)
     }
 }
 
-double mcc_data_get_integrated_dose(const MCCData *data)
+double mcc_data_get_sum(const MCCData *data)
 {
     return data->sum;
+}
+
+long mcc_data_get_supp(const MCCData *data)
+{
+    return data->nsupp;
 }

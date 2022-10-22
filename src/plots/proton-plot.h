@@ -25,7 +25,7 @@
 
 #define DEPTH_AXLABEL   wxT("Depth (cm)")
 #define DOSE_AXLABEL    wxT("Dose (Gy)")
-#define PLANE_AXLABEL   "Planar stopping power (kJ m⁻¹)"
+#define PLANE_AXLABEL   wxT("Average planar dose (Gy)")
 #define PDIFF_AXLABEL   wxT("% Dose difference")
 
 #ifndef M_PI_2
@@ -57,15 +57,16 @@ protected:
     std::vector<double> yticks;
     std::vector<wxString> xticklabels, yticklabels;
 
-    const wxString xlabel, ylabel;
+    const wxString xlabel, ylabel, plabel;
 
-    std::vector<std::tuple<double, double, double>> measurements;
+    std::vector<std::tuple<double, double>> measurements;
 
     void write_depth_axis();
-    void write_dose_axis(const double limit);
+    void write_dose_axis(const double limit, const wxString &fmt);
 
 public:
-    ProtonPlot(wxWindow *parent, const wxString &xlabel, const wxString &ylabel);
+    ProtonPlot(wxWindow *parent, const wxString &xlabel, 
+               const wxString &ylabel, const wxString &plabel);
 
     virtual void draw_plot(wxGraphicsContext *gc) = 0;
     void write_axes(); /* Pure virtual function call danger */

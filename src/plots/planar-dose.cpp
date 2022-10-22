@@ -1,5 +1,10 @@
 #include "../main-window.h"
 
+#define PLOTTING_STOPPING_POWER 1
+
+static const std::array<wxString, 4> plbls = {
+    wxT("-10"), wxT("-5"), wxT(" 5"), wxT(" 10") };
+
 
 void PlanarDosePlot::draw_measurements(wxGraphicsContext *gc, struct plot_context *ctx)
 {
@@ -10,24 +15,36 @@ void PlanarDosePlot::draw_measurements(wxGraphicsContext *gc, struct plot_contex
         /* Draw a line at the currently drawn depth */
         const double depth = wxGetApp().get_depth();
         const double x = std::fma(depth, depthscale, ctx->origin.m_x);
+#if PLOTTING_STOPPING_POWER
+        const double y = std::fma(proton_stppwr_get_dose(wxGetApp().get_dose(), depth), dosescale, ctx->origin.m_y);
+#else
         const double y = std::fma(proton_planes_get_dose(wxGetApp().get_dose(), depth), dosescale, ctx->origin.m_y);
+#endif
         gc->StrokeLine(x, ctx->origin.m_y, x, y);
     } else {
         const double dcenter = std::fma(0.5, ctx->width.m_y, ctx->origin.m_y);
-        const double dscale = 5.0 * ctx->width.m_y;
-        for (auto &[depth, _, dose] : measurements) {
+        const double dscale = 2.0 * ctx->width.m_y;
+        for (auto &[depth, dose] : measurements) {
             const double x = std::fma(depth, depthscale, ctx->origin.m_x);
             const double y = std::fma(dose, dosescale, ctx->origin.m_y);
+#if PLOTTING_STOPPING_POWER
+            const double mdose = proton_stppwr_get_dose(wxGetApp().get_dose(), depth);
+#else
             const double mdose = proton_planes_get_dose(wxGetApp().get_dose(), depth);
+#endif
+            std::cout << " TPS dose:      " << mdose
+                    << "\n Measured dose: " << dose
+                    << '\n';
             gc->DrawRectangle(
                 std::fma(-0.5, ctx->boxwidth, x),
                 std::fma(-0.5, ctx->boxwidth, y),
                 ctx->boxwidth, ctx->boxwidth);
             dose = (dose - mdose) / mdose;
+            std::cout << " %difference:   " << dose * 100.0 << "%\n";
             depth = x;
         }
         gc->SetPen(diffpen);
-        for (const auto &[x, _, dose] : measurements) {
+        for (auto &&[x, dose] : measurements) {
             const double y = std::fma(dose, dscale, dcenter);/* ctx->origin.m_y + 0.5 * ctx->width.m_y + 5 * ctx->width.m_y * meas.second; */
             gc->DrawEllipse(
                 std::fma(-0.5, ctx->boxwidth, x),
@@ -44,8 +61,12 @@ void PlanarDosePlot::draw_line_dose(wxGraphicsContext *gc, const struct plot_con
     const double depthorig = std::fma(depthscale, 0.5, ctx->origin.m_x);
     const float *ld;
     wxGraphicsPath p = gc->CreatePath();
-    long i, n;
-    ld = proton_planes_raw(wxGetApp().get_dose(), &n);
+    long i;
+#if PLOTTING_STOPPING_POWER
+    ld = proton_stppwr_raw(wxGetApp().get_dose());
+#else
+    ld = proton_planes_raw(wxGetApp().get_dose());
+#endif
     gc->SetPen(dosepen);
     p.MoveToPoint(depthorig, std::fma(static_cast<double>(*ld), dosescale, ctx->origin.m_y));
     ld++;
@@ -129,6 +150,56 @@ void PlanarDosePlot::draw_yaxis(wxGraphicsContext *gc, const struct plot_context
     gc->StrokePath(p);
 }
 
+void PlanarDosePlot::draw_paxis(wxGraphicsContext *gc, const struct plot_context *ctx)
+{
+    const wxString &axlbl = plabel;
+    const double c = std::fma(0.5, ctx->width.m_y, ctx->origin.m_y);
+    const double t = std::fma(1.0, ctx->tikwidth, ctx->bright.m_x);
+    const double heights[] = {
+        std::fma(-0.20, ctx->width.m_y, c),
+        std::fma(-0.10, ctx->width.m_y, c),
+        std::fma( 0.10, ctx->width.m_y, c),
+        std::fma( 0.20, ctx->width.m_y, c)
+    };
+    wxGraphicsPath p = gc->CreatePath();
+    double txw, txh;
+    gc->PushState();
+
+    gc->SetPen(diffpen);
+    p.MoveToPoint(ctx->bright);
+    p.AddLineToPoint(ctx->tright);
+    p.MoveToPoint(ctx->origin.m_x, heights[1]);
+    p.AddLineToPoint(ctx->bright.m_x, heights[1]);
+    p.MoveToPoint(ctx->origin.m_x, heights[2]);
+    p.AddLineToPoint(ctx->bright.m_x, heights[2]);
+    gc->StrokePath(p);
+
+    gc->SetPen(diffpendashed);
+    p = gc->CreatePath();
+    p.MoveToPoint(ctx->origin.m_x, heights[0]);
+    p.AddLineToPoint(ctx->bright.m_x, heights[0]);
+    p.MoveToPoint(ctx->origin.m_x, heights[3]);
+    p.AddLineToPoint(ctx->bright.m_x, heights[3]);
+    gc->StrokePath(p);
+
+    gc->SetFont(ctx->tikfont, diffcolor);
+    gc->GetTextExtent(plbls[0], &txw, &txh);
+    gc->DrawText(plbls[0], t, std::fma(-0.5, txh, heights[0]));
+    gc->GetTextExtent(plbls[1], &txw, &txh);
+    gc->DrawText(plbls[1], t, std::fma(-0.5, txh, heights[1]));
+    gc->GetTextExtent(plbls[2], &txw, &txh);
+    gc->DrawText(plbls[2], t, std::fma(-0.5, txh, heights[2]));
+    gc->GetTextExtent(plbls[3], &txw, &txh);
+    gc->DrawText(plbls[3], t, std::fma(-0.5, txh, heights[3]));
+
+    gc->SetFont(ctx->axfont, diffcolor);
+    gc->GetTextExtent(axlbl, &txw, &txh);
+    gc->DrawText(axlbl,
+        ctx->bright.m_x + ctx->tikwidth + ctx->maxpwidth,/* std::fma(6.0, ctx->tikwidth, ctx->bright.m_x), */
+        std::fma(0.5, txw, c), M_PI_2);
+    gc->PopState();
+}
+
 void PlanarDosePlot::initialize_plot_context(wxGraphicsContext *gc, struct plot_context *ctx)
 {
     constexpr double tmargin = 0.05;
@@ -156,13 +227,18 @@ void PlanarDosePlot::initialize_plot_context(wxGraphicsContext *gc, struct plot_
         gc->GetTextExtent(ytl, &txw, &txh);
         ctx->maxywidth = std::max(ctx->maxywidth, txw);
     }
+    for (const wxString &ptl : plbls) {
+        gc->GetTextExtent(ptl, &txw, &txh);
+        ctx->maxpwidth = std::max(ctx->maxpwidth, txw);
+    }
 
     gc->SetFont(ctx->axfont, *wxBLACK);
     gc->GetTextExtent(ylabel, &txw, &txh);
     ctx->origin.m_x = txh + ctx->maxywidth + ctx->tikwidth;
     gc->GetTextExtent(xlabel, &txw, &txh);
     ctx->origin.m_y = ctx->width.m_y - (txh + ctx->maxxheight + ctx->tikwidth);
-    ctx->width.m_x -= ctx->maxpwidth + ctx->tikwidth + ctx->origin.m_x;
+    gc->GetTextExtent(plabel, &txw, &txh);
+    ctx->width.m_x -= txh + ctx->maxpwidth + ctx->tikwidth + ctx->origin.m_x;
     ctx->width.m_y = std::fma(tmargin, ctx->width.m_y, -ctx->origin.m_y);
 
     ctx->bright = ctx->tleft = ctx->origin;
@@ -182,13 +258,20 @@ void PlanarDosePlot::draw_plot(wxGraphicsContext *gc)
     gc->GetSize(&ctx.width.m_x, &ctx.width.m_y);
     gc->SetBrush(*wxWHITE_BRUSH);
     gc->DrawRectangle(0.0, 0.0, ctx.width.m_x, ctx.width.m_y);
-    wxGetApp().get_measurements(measurements);
+#if PLOTTING_STOPPING_POWER
+    wxGetApp().get_sp_measurements(measurements);
+#else
+    wxGetApp().get_pd_measurements(measurements);
+#endif
     initialize_plot_context(gc, &ctx);
 
     gc->SetBrush(wxNullBrush);
     gc->SetPen(*wxBLACK_PEN);
     draw_xaxis(gc, &ctx);
     draw_yaxis(gc, &ctx);
+    if (!measurements.empty()) {
+        draw_paxis(gc, &ctx);
+    }
 
     gc->Clip(ctx.origin.m_x, ctx.origin.m_y, ctx.width.m_x, ctx.width.m_y);
     draw_dashes(gc, &ctx);
@@ -203,11 +286,21 @@ void PlanarDosePlot::write_xaxis()
 
 void PlanarDosePlot::write_yaxis()
 {
-    write_dose_axis(PLANEMAX_MULT * proton_planes_max(wxGetApp().get_dose()));
+#if PLOTTING_STOPPING_POWER
+    write_dose_axis(PLANEMAX_MULT * proton_stppwr_max(wxGetApp().get_dose()), wxT("%.2f"));
+#else
+    write_dose_axis(PLANEMAX_MULT * proton_planes_max(wxGetApp().get_dose()), wxT("%.2f"));
+#endif
 }
 
 PlanarDosePlot::PlanarDosePlot(wxWindow *parent):
-    ProtonPlot(parent, DEPTH_AXLABEL, wxString::FromUTF8(PLANE_AXLABEL))
+    ProtonPlot(parent, DEPTH_AXLABEL,
+#if PLOTTING_STOPPING_POWER
+        wxString::FromUTF8("Planar stopping power (J m⁻¹)"),
+#else
+        wxString::FromUTF8(PLANE_AXLABEL),
+#endif
+        PDIFF_AXLABEL)
 {
 
 }
