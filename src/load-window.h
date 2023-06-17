@@ -14,6 +14,8 @@ public:
     LoadWindow(wxWindow *parent);
 
     wxString get_directory() const;
+
+    void set_directory(const wxString &dir);
 };
 
 

@@ -4,6 +4,7 @@
 #define DOSE_WINDOW_H
 
 #include <wx/wx.h>
+#include <wx/dnd.h>
 #include "proton/proton-dose.h"
 
 
@@ -12,6 +13,14 @@ class DoseWindow : public wxWindow {
     ProtonImage *img;
 
     wxPoint origin;
+
+    /* class DoseDragNDrop : public wxFileDropTarget {
+
+    public:
+        DoseDragNDrop() = default;
+
+        virtual bool OnDropFiles(wxCoord WXUNUSED(x), wxCoord WXUNUSED(y), const wxArrayString &filenames) override;
+    } droptarget; */
 
     double affine[6];
     double conv[2];
@@ -45,9 +54,9 @@ public:
     void on_plot_changed(wxCommandEvent &e);
     void on_shift_changed(wxCommandEvent &e);
 
-    void get_depth_range(float range[/* static 2 */]) const noexcept;
+    inline void get_depth_range(float range[]) const noexcept { proton_dose_depth_range(dose, range); }
 
-    const ProtonDose *get_dose() const noexcept;
+    constexpr const ProtonDose *get_dose() const noexcept { return dose; }
     void unload_dose() noexcept;
 };
 

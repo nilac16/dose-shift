@@ -20,11 +20,11 @@ class DepthControl : public wxPanel {
 public:
     DepthControl(wxWindow *parent);
 
-    int get_value() const;
+    inline int get_value() const { return slider->GetValue(); }
     void set_value(int x);
 
     void set_depth_range(int low, int high);
-    int get_max() const;
+    inline int get_max() const { return slider->GetMax(); }
 };
 
 

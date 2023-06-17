@@ -25,3 +25,8 @@ wxString LoadWindow::get_directory() const
     }
     return str;
 }
+
+void LoadWindow::set_directory(const wxString &dir)
+{
+    fctrl->SetPath(dir);
+}

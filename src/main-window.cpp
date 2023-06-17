@@ -14,13 +14,13 @@ void MainApplication::initialize_main_window()
     canv = new DoseWindow(frame);
     cwnd = new CtrlWindow(frame);
     lwnd = new LoadWindow(frame);
+    pwnd = new PlotWindow(frame);
+
     hbox->Add(canv, 1, wxEXPAND);
     hbox->Add(cwnd, 0, wxEXPAND);
     vbox->Add(hbox, 1, wxEXPAND);
     vbox->Add(lwnd, 0, wxEXPAND);
     frame->SetSizer(vbox);
-
-    pwnd = new PlotWindow(frame);
 
     lwnd->Bind(wxEVT_FILEPICKER_CHANGED, &MainApplication::on_dicom_load, this);
 
@@ -32,6 +32,9 @@ void MainApplication::initialize_main_window()
 
     /** Detector window was manipulated at all */
     cwnd->Bind(EVT_SHIFT_CONTROL, &MainApplication::on_shift_change, this);
+
+    /** Visualization mode was changed */
+    cwnd->Bind(EVT_VISUAL_CONTROL, &MainApplication::on_visual_change, this);
 
     /** "Open plot window" button pressed */
     cwnd->Bind(EVT_PLOT_OPEN, &MainApplication::on_plot_open, this);
@@ -68,6 +71,13 @@ void MainApplication::on_shift_change(wxCommandEvent &e)
     }
 }
 
+void MainApplication::on_visual_change(wxCommandEvent &e)
+{
+    if (canv->dose_loaded()) {
+        canv->on_depth_changed(e);  /* yikes asymmetric */
+    }
+}
+
 void MainApplication::on_plot_open(wxCommandEvent &WXUNUSED(e))
 {
     if (!pwnd->IsVisible()) {
@@ -77,76 +87,11 @@ void MainApplication::on_plot_open(wxCommandEvent &WXUNUSED(e))
     }
 }
 
-float MainApplication::get_depth() const
-{
-    return cwnd->get_depth();
-}
-
 void MainApplication::set_depth_range()
 {
     float range[2];
     canv->get_depth_range(range);
     cwnd->set_depth_range(range[0], range[1]);
-}
-
-bool MainApplication::detector_enabled() const
-{
-    return cwnd->detector_enabled();
-}
-
-void MainApplication::get_detector_affine(double affine[]) const noexcept
-{
-    cwnd->get_detector_affine(affine);
-}
-
-void MainApplication::get_line_dose(double *x, double *y) const noexcept
-{
-    cwnd->get_line_dose(x, y);
-}
-
-void MainApplication::set_line_dose(double x, double y)
-{
-    cwnd->set_line_dose(x, y);
-}
-
-void MainApplication::set_translation(double x, double y)
-{
-    cwnd->set_translation(x, y);
-}
-
-/* bool MainApplication::dose_loaded() const noexcept
-{
-    return canv->dose_loaded();
-} */
-
-/* const ProtonDose *MainApplication::get_dose() const noexcept
-{
-    return canv->get_dose();
-} */
-
-double MainApplication::get_max_slider_depth() const
-{
-    return cwnd->get_max_slider_depth();
-}
-
-double MainApplication::get_max_dose() const noexcept
-{
-    return static_cast<double>(proton_dose_max(canv->get_dose()));
-}
-
-void MainApplication::unload_dose() noexcept
-{
-    canv->unload_dose();
-}
-
-wxString MainApplication::get_RS_directory() const
-{
-    return lwnd->get_directory();
-}
-
-void MainApplication::convert_coordinates(double *x, double *y) const noexcept
-{
-    return cwnd->convert_coordinates(x, y);
 }
 
 bool MainApplication::OnInit()
@@ -166,10 +111,4 @@ bool MainApplication::OnInit()
         wxMessageBox(str, wxT("Init failed"), wxICON_ERROR);
         return false;
     }
-}
-
-
-extern "C" double MAXDOSE_EXTERN(void)
-{
-    return wxGetApp().get_max_dose();
 }

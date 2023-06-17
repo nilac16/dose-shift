@@ -28,14 +28,28 @@ enum {
 const char *mcc_get_error(int err);
 
 
-typedef struct _mcc_data MCCData;
+typedef struct _mcc_data {
+    unsigned int sz, _cap;
+    long nsupp;
+    double sum;
+
+#if !defined(__cplusplus) || !__cplusplus
+    struct mcc_scan {
+        unsigned int sz, _cap;
+        double y;
+        struct {
+            double x, dose;
+        } data[];
+    } *scans[];
+#endif
+} MCCData;
 
 MCCData *mcc_data_create(const char *filename, int *stat);
 void mcc_data_destroy(MCCData *mcc);
 
 double mcc_data_get_point_dose(const MCCData *mcc, double x, double y);
-double mcc_data_get_sum(const MCCData *mcc);
-long mcc_data_get_supp(const MCCData *mcc);
+inline double mcc_data_get_sum(const MCCData *mcc) { return mcc->sum; }
+inline long mcc_data_get_supp(const MCCData *mcc) { return mcc->nsupp; }
 
 
 #if __cplusplus

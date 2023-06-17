@@ -235,6 +235,39 @@ float proton_stppwr_max(const ProtonDose *dose)
 }
 
 
+static void proton_gradient_compute(ProtonDose *dose)
+{
+    const size_t axskip = (size_t)dose->px_dimensions[0] * dose->px_dimensions[1];
+    const long jend = dose->px_dimensions[1] - 1;
+    const float *dptr, s = dose->px_spacing[1];
+    float *gptr;
+    long i, j, k;
+
+    for (k = 0; k < dose->px_dimensions[2]; k++) {
+        gptr = dose->grad + k * axskip;
+        dptr = dose->data + k * axskip;
+        for (j = 0; j < jend; j++) {
+            for (i = 0; i < dose->px_dimensions[0]; i++) {
+                *gptr = (dptr[dose->px_dimensions[0]] - dptr[0]) / s;
+                gptr++;
+                dptr++;
+            }
+        }
+    }
+}
+
+
+static void proton_gradient_create(ProtonDose *dose)
+{
+    const size_t len = dose->px_dimensions[0] * dose->px_dimensions[1] * dose->px_dimensions[2];
+
+    dose->grad = calloc(len, sizeof *dose->grad);
+    if (dose->grad) {
+        proton_gradient_compute(dose);
+    }
+}
+
+
 /* ---------------------------------------------------------------------- */
 /*                              Dose structure                            */
 /* ---------------------------------------------------------------------- */
@@ -288,8 +321,10 @@ ProtonDose *proton_dose_create(const char *filename)
         return NULL;
     }
     dose->linedose = NULL;
+    dose->grad = NULL;
     proton_planes_create(dose);
-    if (!dose->planes) {
+    proton_gradient_create(dose);
+    if (!dose->planes || !dose->grad) {
         proton_dose_destroy(dose);
         return NULL;
     }
@@ -471,7 +506,7 @@ static void proton_dose_interpolate_cell(const float interp[_q(static 4)],
 /** Given a slice depth in @p z, find the the scan with the greatest z 
  *  coordinate not greater than @p z */
 static void proton_dose_find_scan(const ProtonDose *dose, float *z,
-                                  const float *restrict *dline)
+                                  const float *base, const float **dline)
 {
     float flz;
     long idx;
@@ -479,12 +514,12 @@ static void proton_dose_find_scan(const ProtonDose *dose, float *z,
     *z /= STATIC_CAST(float, dose->px_spacing[1]);
     flz = floorf(*z);
     idx = STATIC_CAST(long, flz);
-    *dline = dose->data + idx * dose->px_dimensions[0];
+    *dline = base + idx * dose->px_dimensions[0];
     *z -= flz;
 }
 
 /** REWRITEME: Not urgent */
-void proton_dose_get_plane(const ProtonDose *dose,
+void proton_dose_get_plane(const ProtonDose *dose, int type,
                            ProtonImage *img, float depth,
                            void (*colormap)(float, unsigned char *))
 {
@@ -492,16 +527,18 @@ void proton_dose_get_plane(const ProtonDose *dose,
     const long alim[2] = { dose->px_dimensions[0] - 1, dose->px_dimensions[2] - 1 };
     const long blim[2] = { proton_image_dimension(img, 0) - 1, proton_image_dimension(img, 1) - 1 };
     unsigned char *buf = proton_image_raw(img);
-    const float *dptr;
+    const float *dptr, *base = (type == PROTON_IMG_DOSE) ? dose->data : dose->grad;
+    const float norm = (type == PROTON_IMG_DOSE) ? dose->dmax : (0.03 * dose->dmax) / 0.5;//dose->px_spacing[1];
     float interp[4];
     long a[2];
+
     if (!proton_image_empty(img)) {
-        proton_dose_find_scan(dose, &depth, &dptr);
+        proton_dose_find_scan(dose, &depth, base, &dptr);
         for (a[1] = 0; a[1] < alim[1]; a[1]++) {
             const float *const dline = dptr;
             for (a[0] = 0; a[0] < alim[0]; a[0]++, dptr++) {
                 proton_dose_load_interpolant(interp, dptr, dose->px_dimensions[0],
-                                             axskip, depth, dose->dmax);
+                                             axskip, depth, norm);
                 proton_dose_interpolate_cell(interp, a, alim, blim, buf, colormap);
             }
             dptr = dline + axskip;

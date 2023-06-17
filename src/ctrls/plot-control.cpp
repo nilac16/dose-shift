@@ -51,7 +51,7 @@ void PlotMeasurement::on_evt_button(wxCommandEvent &WXUNUSED(e))
                 entry_write_double(dctrl, depth / 10.0);
             } else {
                 wxString msg;
-                msg.Printf(wxT("Failed to load MCC file: %s"), mcc_get_error(envno));
+                msg.Printf(wxT("Failed to load MCC file: %s"), wxString::FromUTF8(mcc_get_error(envno)));
                 wxMessageBox(msg, wxT("Load failed"), wxICON_ERROR);
                 return;
             }
@@ -102,21 +102,6 @@ PlotMeasurement::PlotMeasurement(wxWindow *parent):
 PlotMeasurement::~PlotMeasurement()
 {
     mcc_data_destroy(data);
-}
-
-double PlotMeasurement::get_dose(double x, double y) const noexcept
-{
-    return mcc_data_get_point_dose(data, x, y);
-}
-
-double PlotMeasurement::get_sum() const noexcept
-{
-    return mcc_data_get_sum(data);
-}
-
-long PlotMeasurement::get_supp() const noexcept
-{
-    return mcc_data_get_supp(data);
 }
 
 void PlotControl::post_change_event()
@@ -181,12 +166,6 @@ PlotControl::PlotControl(wxWindow *parent):
         });
 }
 
-void PlotControl::get_point(double *x, double *y) const noexcept
-{
-    *x = this->x;
-    *y = this->y;
-}
-
 void PlotControl::set_point(double x, double y)
 {
     wxString str;
@@ -212,7 +191,9 @@ void PlotControl::get_ld_measurements(std::vector<std::tuple<double, double>> &m
 }
 
 void PlotControl::get_pd_measurements(std::vector<std::tuple<double, double>> &meas) const
-/* wew lad, this function is FUKd */
+/** wew lad, this function is FUKd
+ *  aka, not production-ready */
+#pragma warning("Averaging algorithm needs to be rewritten")
 {
     std::map<double, std::vector<std::pair<double, long>>> map;
     meas.clear();

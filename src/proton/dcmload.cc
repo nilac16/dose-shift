@@ -1,4 +1,5 @@
 #include "dcmload.h"
+#include <cmath>
 #include <dcmtk/dcmrt/drmdose.h>
 
 

@@ -159,7 +159,7 @@ void DoseWindow::affine_write()
 void DoseWindow::image_write()
 {
     float depth = wxGetApp().get_depth();
-    proton_dose_get_plane(dose, img, depth, proton_colormap);
+    proton_dose_get_plane(dose, wxGetApp().visuals(), img, depth, wxGetApp().colormap());
 }
 
 void DoseWindow::image_realloc_and_write(const wxSize &csz)
@@ -264,16 +264,6 @@ void DoseWindow::on_shift_changed(wxCommandEvent &WXUNUSED(e))
 {
     affine_write();
     this->Refresh();
-}
-
-void DoseWindow::get_depth_range(float range[]) const noexcept
-{
-    proton_dose_depth_range(dose, range);
-}
-
-const ProtonDose *DoseWindow::get_dose() const noexcept
-{
-    return dose;
 }
 
 void DoseWindow::unload_dose() noexcept

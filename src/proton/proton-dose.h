@@ -20,7 +20,7 @@ enum {
 
 
 typedef struct _proton_dose {
-    /* Everything in this section must be extracted from the DICOM */    
+    /* Everything in this section must be extracted from the DICOM */
     double top_left[3];
     double px_spacing[3];
     long px_dimensions[3];
@@ -30,6 +30,8 @@ typedef struct _proton_dose {
     float *planes, *stppwr, *linedose;
     float dmax;
 
+    /* Gradient field in y */
+    float *grad;
 #if !defined(__cplusplus) || !__cplusplus
     float data[];
 #endif
@@ -64,7 +66,7 @@ inline const float *proton_line_raw(const ProtonDose *dose) { return dose->lined
 inline const float *proton_planes_raw(const ProtonDose *dose) { return dose->planes; }
 inline const float *proton_stppwr_raw(const ProtonDose *dose) { return dose->stppwr; }
 
-/** WARNING: This value is NOT stored in the dose struct, so this function
+/** @warning This value is NOT stored in the dose struct, so this function
  *  COMPUTES the result! */
 float proton_planes_max(const ProtonDose *dose);
 float proton_stppwr_max(const ProtonDose *dose);
@@ -91,11 +93,15 @@ void proton_image_destroy(ProtonImage *img);
 inline long proton_image_dimension(const ProtonImage *img, int dim) { return img->dim[dim]; }
 unsigned char *proton_image_raw(ProtonImage *img);
 
-/** Should this be inline? */
 inline bool proton_image_empty(const ProtonImage *img) { return img->dim[0] == 0 || img->dim[1] == 0; }
 
+enum {
+    PROTON_IMG_DOSE,
+    PROTON_IMG_GRAD
+};
+
 /** Interpolates the dose grid onto the 2D buffer at @p img */
-void proton_dose_get_plane(const ProtonDose *dose,
+void proton_dose_get_plane(const ProtonDose *dose, int type,
                            ProtonImage *img, float depth,
                            void (*colormap)(float, unsigned char *));
 

@@ -32,10 +32,10 @@ public:
     ~PlotMeasurement();
 
     constexpr bool is_loaded() const noexcept { return data != nullptr; }
-    double get_dose(double x, double y) const noexcept;
+    inline double get_dose(double x, double y) const noexcept { return mcc_data_get_point_dose(data, x, y); }
     constexpr double get_depth() const noexcept { return depth; }
-    double get_sum() const noexcept;
-    long get_supp() const noexcept;
+    inline double get_sum() const noexcept { return mcc_data_get_sum(data); }
+    inline long get_supp() const noexcept { return mcc_data_get_supp(data); }
 };
 
 
@@ -53,7 +53,7 @@ class PlotControl : public wxPanel {
 public:
     PlotControl(wxWindow *parent);
 
-    void get_point(double *x, double *y) const noexcept;
+    inline void get_point(double *x, double *y) const noexcept { *x = this->x; *y = this->y; }
     void set_point(double x, double y);
 
     void get_ld_measurements(std::vector<std::tuple<double, double>> &meas) const;

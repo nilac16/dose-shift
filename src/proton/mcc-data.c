@@ -21,6 +21,26 @@ typedef int (*__compar_fn_t)(const void *, const void *);
 
 #define EVQ 1.602176634e-19
 
+/** Backus-Naur rules
+ *  <file>          ::= "BEGIN_SCAN_DATA" <file-contents> "END_SCAN_DATA"
+ *  <file-contents> ::= <kv-list> <scan-list> [<kv-list>?]
+ * 
+ *  <kv-list> ::= [<kv-pair>] <kv-list>
+ *  <kv-pair> ::= <key> "=" <value>
+ * 
+ *  <scan-list>  ::= [<scan>] <scan-list>
+ * 
+ *  <scan>       ::= <scan-begin> <scan-contents> <scan-end>
+ *  <scan-begin> ::= "BEGIN_SCAN" <scan-index>
+ *  <scan-end>   ::= "END_SCAN" <scan-index>
+ * 
+ *  <scan-contents> ::= <kv-list> <data> [<kv-list>?]
+ * 
+ *  <data>          ::= "BEGIN_DATA" <data-contents> "END_DATA"
+ *  <data-contents> ::= <data-pos> <data-dose> <data-idx>
+ *  <datum-idx>     ::= "#" <datum-idx>
+ */
+
 
 const char *mcc_get_error(int err)
 {
@@ -38,18 +58,6 @@ const char *mcc_get_error(int err)
     return (err > 0 && err < nstrings) ? errstrings[err] : NULL;
 }
 
-struct _mcc_data {
-    unsigned int sz, _cap;
-    long nsupp;
-    double sum;
-    struct mcc_scan {
-        unsigned int sz, _cap;
-        double y;
-        struct {
-            double x, dose;
-        } data[];
-    } *scans[];
-};
 
 static struct mcc_scan *mcc_scan_alloc(double y, unsigned initsz, jmp_buf env)
 {
@@ -132,8 +140,9 @@ enum mcc_scope {
 struct mcc_parse_context {
     enum mcc_scope scope;
     struct mcc_stmt stmt;
-    int offaxis_fnd, crosscal_fnd;
     double offaxis, crosscal;
+    bool offaxis_fnd:   1;
+    bool crosscal_fnd:  1;
 };
 
 static const char *delims[] = {
@@ -648,14 +657,4 @@ double mcc_data_get_point_dose(const MCCData *data, double x, double y)
     } else {
         return 0.0;
     }
-}
-
-double mcc_data_get_sum(const MCCData *data)
-{
-    return data->sum;
-}
-
-long mcc_data_get_supp(const MCCData *data)
-{
-    return data->nsupp;
 }

@@ -23,35 +23,39 @@ class MainApplication : public wxApp {
     void on_depth_change(wxCommandEvent &e);
     void on_plot_change(wxCommandEvent &e);
     void on_shift_change(wxCommandEvent &e);
+    void on_visual_change(wxCommandEvent &e);
     void on_plot_open(wxCommandEvent &e);
 
 public:
-    float get_depth() const;
+    inline float get_depth() const { return cwnd->get_depth(); }
     void set_depth_range();
 
-    bool detector_enabled() const;
-    void get_detector_affine(double affine[]) const noexcept;
+    inline bool detector_enabled() const { return cwnd->detector_enabled(); }
+    inline void get_detector_affine(double affine[]) const noexcept { cwnd->get_detector_affine(affine); }
 
-    void get_line_dose(double *x, double *y) const noexcept;
-    void set_line_dose(double x, double y);
+    inline void get_line_dose(double *x, double *y) const noexcept { cwnd->get_line_dose(x, y); }
+    inline void set_line_dose(double x, double y) { cwnd->set_line_dose(x, y); }
 
-    void set_translation(double x, double y);
+    inline void set_translation(double x, double y) { cwnd->set_translation(x, y); }
 
     constexpr bool dose_loaded() const noexcept { return canv->dose_loaded(); }
-    inline const ProtonDose *get_dose() const noexcept { return canv->get_dose(); }
+    constexpr const ProtonDose *get_dose() const noexcept { return canv->get_dose(); }
 
-    double get_max_slider_depth() const;
-    double get_max_dose() const noexcept;
+    inline double get_max_slider_depth() const { return cwnd->get_max_slider_depth(); }
+    inline double get_max_dose() const noexcept { return static_cast<double>(proton_dose_max(get_dose())); }
 
-    void unload_dose() noexcept;
+    inline void unload_dose() noexcept { canv->unload_dose(); }
 
     inline void get_ld_measurements(std::vector<std::tuple<double, double>> &meas) const { cwnd->get_ld_measurements(meas); }
     inline void get_pd_measurements(std::vector<std::tuple<double, double>> &meas) const { cwnd->get_pd_measurements(meas); }
     inline void get_sp_measurements(std::vector<std::tuple<double, double>> &meas) const { cwnd->get_sp_measurements(meas); }
 
-    wxString get_RS_directory() const;
+    inline wxString get_RS_directory() const { return lwnd->get_directory(); }
 
-    void convert_coordinates(double *x, double *y) const noexcept;
+    inline void convert_coordinates(double *x, double *y) const noexcept { cwnd->convert_coordinates(x, y); }
+
+    void (*colormap() const noexcept)(float, unsigned char *) { return cwnd->colormap(); }
+    int visuals() const noexcept { return cwnd->visuals(); }
 
     virtual bool OnInit() override;
 };

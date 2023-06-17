@@ -10,7 +10,14 @@ extern "C" {
 
 void proton_colormap(float x, unsigned char px[]);
 
-void proton_affine_matmul(const double mat1[], double mat2[]);
+
+/** Perceptually uniform colormaps, from Octave */
+void proton_cmap_viridis(float x, unsigned char px[]);
+void proton_cmap_turbo(float x, unsigned char px[]);
+
+
+/** For the gradient visualizer */
+void proton_cmap_gradient(float x, unsigned char px[]);
 
 
 #if __cplusplus
