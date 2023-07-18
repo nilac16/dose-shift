@@ -14,13 +14,13 @@ class DoseWindow : public wxWindow {
 
     wxPoint origin;
 
-    /* class DoseDragNDrop : public wxFileDropTarget {
+    class DoseDragNDrop : public wxFileDropTarget {
 
     public:
         DoseDragNDrop() = default;
 
         virtual bool OnDropFiles(wxCoord WXUNUSED(x), wxCoord WXUNUSED(y), const wxArrayString &filenames) override;
-    } droptarget; */
+    } *droptarget;
 
     double affine[6];
     double conv[2];

@@ -3,6 +3,17 @@
 #include "proton-aux.h"
 
 
+bool DoseWindow::DoseDragNDrop::OnDropFiles(wxCoord, wxCoord, const wxArrayString &filenames)
+{
+    if (filenames.size() != 1) {
+        return false;
+    } else {
+        wxGetApp().dropped_file(filenames[0]);
+        return true;
+    }
+}
+
+
 void DoseWindow::paint_detector(wxPaintDC &dc)
 {
     constexpr double xhair = 5.0;
@@ -159,7 +170,7 @@ void DoseWindow::affine_write()
 void DoseWindow::image_write()
 {
     float depth = wxGetApp().get_depth();
-    proton_dose_get_plane(dose, wxGetApp().visuals(), img, depth, wxGetApp().colormap());
+    proton_dose_get_plane(dose, &wxGetApp().visuals(), img, depth);
 }
 
 void DoseWindow::image_realloc_and_write(const wxSize &csz)
@@ -206,7 +217,8 @@ void DoseWindow::write_line_dose() noexcept
 DoseWindow::DoseWindow(wxWindow *parent):
     wxWindow(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxFULL_REPAINT_ON_RESIZE),
     dose(nullptr),
-    img(nullptr)
+    img(nullptr),
+    droptarget(new DoseDragNDrop)
 {
     this->SetCursor(*wxCROSS_CURSOR);
 
@@ -219,6 +231,8 @@ DoseWindow::DoseWindow(wxWindow *parent):
 #if _WIN32
     this->SetDoubleBuffered(true);
 #endif
+
+    this->SetDropTarget(droptarget);
 }
 
 DoseWindow::~DoseWindow()
@@ -229,8 +243,13 @@ DoseWindow::~DoseWindow()
 
 void DoseWindow::load_file(const char *filename)
 {
+    /* This is because I'm tired of presenting the user with a useless error
+    message. That still happens, though, because I incurred a large amount of
+    technical debt in the dose file */
+    char err[1024] = { 0 };
+
     proton_dose_destroy(dose);
-    dose = proton_dose_create(filename);
+    dose = proton_dose_create(filename, sizeof err, err);
     if (dose) {
         wxGetApp().set_depth_range();
         image_realloc_and_write(this->GetSize());
@@ -238,8 +257,7 @@ void DoseWindow::load_file(const char *filename)
         conv_write();
         write_line_dose();
     } else {
-        wxMessageBox(wxT("Failed to load dose"),
-            wxT("Load failed"), wxICON_ERROR, this);
+        wxMessageBox(wxString(err), wxT("Load failed"), wxICON_ERROR, this);
     }
     this->Refresh();
 }

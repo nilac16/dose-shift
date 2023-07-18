@@ -8,13 +8,14 @@ struct _dicom_rtdose {
 };
 
 
-RTDose *rtdose_create(const char *filename)
+RTDose *rtdose_create(const char *filename, size_t ebufsz, char *errbuf)
 {
     RTDose *dose;
     dose = reinterpret_cast<RTDose *>(new (std::nothrow) DRTDose);
     if (dose) {
         OFCondition stat = dose->dcm.loadFile(filename);
         if (stat.bad()) {
+            snprintf(errbuf, ebufsz, "%s", stat.text());
             rtdose_destroy(dose);
             dose = NULL;
         }
@@ -53,9 +54,9 @@ bool rtdose_get_px_spacing(const RTDose *dcm, double spacing[])
         return true;
     }
     spacing[1] = static_cast<double>(x);
-    /* This may be wrong. I think the correct information is in the grid
-    frame offset vector (3004, 000c). For now, all of our dicoms have
-    uniform grid frame offsets */
+    /* UH OH STINKY AND I DONT EVEN CARE
+    If I ever encounter an RTDose that has anisotropy in Z I just might actually
+    go apeshit */
     stat = dcm->dcm.getSliceThickness(x);
     if (stat.bad()) {
         return true;

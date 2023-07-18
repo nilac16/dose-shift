@@ -15,7 +15,15 @@ public:
 
     wxString get_directory() const;
 
-    void set_directory(const wxString &dir);
+    void set_file(const wxString &path);
+
+    /** Let's open a dialog
+     *  The file dialog
+     *  
+     *  Wow really no way to do this without refactoring this entire control
+     *  I knew I would pay the price later for such a facile implementation
+     */
+    //void open();
 };
 
 

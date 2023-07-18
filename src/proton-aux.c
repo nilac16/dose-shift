@@ -31,7 +31,7 @@ static float cmap_clamp(float x, const float lbound, const float ubound)
 
 static unsigned char cmap_red(float x)
 {   
-    x = cmap_clamp(4.0f * (x - 0.25f), 0.0f, 1.0f);
+    x = cmap_clamp(fmaf(4.0f, x, -1.0f), 0.0f, 1.0f);
     return STATIC_CAST(unsigned char, UCHAR_MAXF * x);
 }
 
@@ -42,14 +42,14 @@ static unsigned char cmap_green(float x)
     } else if (x < 0.75f) {
         x = 1.5f - x;
     } else {
-        x = 3.0f * (1.0f - x);
+        x = fmaf(-3.0f, x, 3.0f);
     }
     return STATIC_CAST(unsigned char, UCHAR_MAXF * x);
 }
 
 static unsigned char cmap_blue(float x)
 {
-    x = cmap_clamp(4.0f * (0.25f - x), 0.0f, 1.0f);
+    x = cmap_clamp(fmaf(-4.0f, x, 1.0f), 0.0f, 1.0f);
     return STATIC_CAST(unsigned char, UCHAR_MAXF * x);
 }
 
@@ -603,11 +603,17 @@ void proton_cmap_gradient(float x, unsigned char px[])
     x = fabsf(x);
     if (x < 1.0f) {
         px[0] = (unsigned char)(x * (float)0xFF);
-        px[1] = (unsigned char)((1.0f - fabsf(fmaf(2.0, x, -1.0))) * 0xFF);
+        px[1] = (unsigned char)((1.0f - fabsf(fmaf(2.0f, x, -1.0f))) * (float)0xFF);
         px[2] = (unsigned char)((1.0f - x) * (float)0xFF);
     } else {
         px[0] = 0xFF;
         px[1] = 0x00;
         px[2] = 0x00;
     }
+}
+
+
+double proton_buildup(double theor)
+{
+    return (theor - 0.8) / 1.02;
 }

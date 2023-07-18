@@ -38,7 +38,7 @@ typedef struct _proton_dose {
 } ProtonDose;
 
 
-ProtonDose *proton_dose_create(const char *filename);
+ProtonDose *proton_dose_create(const char *filename, size_t ebufsz, char err[]);
 void proton_dose_destroy(ProtonDose *dose);
 
 inline double proton_dose_origin(const ProtonDose *dose, int dim) { return dose->top_left[dim]; }
@@ -95,15 +95,26 @@ unsigned char *proton_image_raw(ProtonImage *img);
 
 inline bool proton_image_empty(const ProtonImage *img) { return img->dim[0] == 0 || img->dim[1] == 0; }
 
-enum {
-    PROTON_IMG_DOSE,
-    PROTON_IMG_GRAD
-};
+
+/** I guess we just fetch this from the visualizer control
+ *  It might be useful to pass this pointer around to the main app class, so it
+ *  can be sent around
+ */
+typedef struct _proton_plane_params {
+    enum {
+        PROTON_IMG_DOSE,
+        PROTON_IMG_GRAD
+    } type;
+    void (*colormap)(float, unsigned char *);
+    float pct_diff;
+    float depth_err;
+} ProtonPlaneParams;
 
 /** Interpolates the dose grid onto the 2D buffer at @p img */
-void proton_dose_get_plane(const ProtonDose *dose, int type,
-                           ProtonImage *img, float depth,
-                           void (*colormap)(float, unsigned char *));
+void proton_dose_get_plane(const ProtonDose        *dose,
+                           const ProtonPlaneParams *params,
+                           ProtonImage             *img,
+                           float                    depth);
 
 
 #if __cplusplus

@@ -41,8 +41,7 @@ public:
 
     inline bool detector_enabled() const { return scon->detector_enabled(); }
 
-    void (*colormap() const noexcept)(float, unsigned char *) { return vcon->colormap(); }
-    int visuals() const noexcept { return vcon->visuals(); }
+    const ProtonPlaneParams &visuals() const noexcept { return vcon->visuals(); }
 };
 
 

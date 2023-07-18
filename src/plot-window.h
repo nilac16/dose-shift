@@ -18,7 +18,9 @@
  */
 #define IMAGE_RES wxSize(1080, 800)
 
-/** PLEASE ALWAYS MAKE THIS THE SQUARE ROOT OF THE OUTPUT IMAGE AREA **/
+/** PLEASE ALWAYS MAKE THIS THE SQUARE ROOT OF THE OUTPUT IMAGE AREA
+ *  There is *no way* to test this at compile time, it is all up to you
+ */
 constexpr double image_gmean = 929.51600308978;
 
 
@@ -32,6 +34,7 @@ class PlotWindow : public wxFrame {
     void on_context_menu_selection(wxCommandEvent &e);
     void on_context_menu(wxContextMenuEvent &e);
 
+    /** Am I even using this?? */
     inline ProtonPlot *get_current_plot()
         { return dynamic_cast<ProtonPlot *>(nb->GetCurrentPage()); }
 
@@ -43,7 +46,7 @@ public:
  *  changing, since the line dose will need to be reinterpolated. Depth/
  *  measurement markers are computed in the paint handler */
 
-    void on_dicom_changed(wxCommandEvent &e);
+    void on_dicom_changed(/* wxCommandEvent &e */);
     void on_depth_changed(wxCommandEvent &e);
     void on_plot_changed(wxCommandEvent &e);
     void on_shift_changed(wxCommandEvent &e);

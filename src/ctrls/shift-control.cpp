@@ -8,20 +8,24 @@ wxDEFINE_EVENT(EVT_SHIFT_CONTROL, wxCommandEvent);
 void ShiftControl::post_change_event()
 {
     wxCommandEvent e(EVT_SHIFT_CONTROL);
+
     wxPostEvent(this, e);
 }
 
-void ShiftControl::write_trig_functions(double degrees)
+
+void ShiftControl::write_trig_functions(double degrees) noexcept
 {
     degrees *= M_PI / 180.0;
     cos = std::cos(degrees);
     sin = std::sin(degrees);
 }
 
+
 void ShiftControl::on_evt_checkbox(wxCommandEvent &WXUNUSED(e))
 {
     post_change_event();
 }
+
 
 void ShiftControl::on_evt_button(wxCommandEvent &WXUNUSED(e))
 {
@@ -34,9 +38,12 @@ void ShiftControl::on_evt_button(wxCommandEvent &WXUNUSED(e))
     post_change_event();
 }
 
+
 void ShiftControl::on_evt_translation(wxCommandEvent &e)
 {
-    wxString str = e.GetString();
+    wxString str;
+
+    str = e.GetString();
     if (str.IsEmpty()) {
         e.Skip();
     } else {
@@ -46,26 +53,32 @@ void ShiftControl::on_evt_translation(wxCommandEvent &e)
     }
 }
 
+
 void ShiftControl::on_evt_rot_slide(wxScrollEvent &e)
 {
     wxString str;
-    double x = static_cast<double>(e.GetInt()) / 10.0;
+    double x;
+
+    x = static_cast<double>(e.GetInt()) / 10.0;
     str.Printf(wxT("%.1f"), x);
     angltext->ChangeValue(str);
     write_trig_functions(x);
     post_change_event();
 }
 
+
 void ShiftControl::on_evt_rot_text(wxCommandEvent &e)
 {
-    wxString str = e.GetString();
+    int min, max, x;
+    wxString str;
+    double y;
+
+    str = e.GetString();
     if (str.IsEmpty()) {
         e.Skip();
     } else {
-        const int min = anglsldr->GetMin();
-        const int max = anglsldr->GetMax();
-        int x;
-        double y;
+        min = anglsldr->GetMin();
+        max = anglsldr->GetMax();
         str.ToDouble(&y);
         x = static_cast<int>(y * 10.0);
         if ((x >= min) && (x <= max)) {
@@ -73,12 +86,13 @@ void ShiftControl::on_evt_rot_text(wxCommandEvent &e)
             write_trig_functions(y);
             post_change_event();
         } else {
-            double v = static_cast<double>(anglsldr->GetValue()) / 10;
-            str.Printf(wxT("%.1f"), v);
+            y = static_cast<double>(anglsldr->GetValue()) / 10;
+            str.Printf(wxT("%.1f"), y);
             angltext->ChangeValue(str);
         }
     }
 }
+
 
 ShiftControl::ShiftControl(wxWindow *parent):
     wxPanel(parent),
@@ -91,23 +105,35 @@ ShiftControl::ShiftControl(wxWindow *parent):
     x(0.0), y(0.0), cos(1.0), sin(0.0)
 {
     wxFloatingPointValidator<double> v;
-    wxBoxSizer *vbox = new wxBoxSizer(wxVERTICAL/* , this, DETECTOR_LABEL */);
-    wxBoxSizer *hbox = new wxBoxSizer(wxHORIZONTAL);
+    wxBoxSizer *vbox, *hbox;
+    vbox = new wxBoxSizer(wxVERTICAL/* , this, DETECTOR_LABEL */);
+    hbox = new wxBoxSizer(wxHORIZONTAL);
+
+    /* Add the checkbox and reset button to the vbox */
     hbox->Add(enabld, 1);
     hbox->Add(reset, 0);
     vbox->Add(hbox, 0, wxEXPAND);
+
+    /* Add the x and y shift boxes the the vbox */
     hbox = new wxStaticBoxSizer(wxHORIZONTAL, this, SHIFT_LABEL);
-    hbox->Add(new wxStaticText(this, wxID_ANY, SHIFT_XLABEL, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE_HORIZONTAL), 1);
+    hbox->Add(new wxStaticText(this, wxID_ANY, SHIFT_XLABEL,
+                               wxDefaultPosition, wxDefaultSize,
+                               wxALIGN_CENTRE_HORIZONTAL), 1);
     hbox->Add(shfttext1, 1);
-    hbox->Add(new wxStaticText(this, wxID_ANY, SHIFT_YLABEL, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE_HORIZONTAL), 1);
+    hbox->Add(new wxStaticText(this, wxID_ANY, SHIFT_YLABEL,
+                               wxDefaultPosition, wxDefaultSize,
+                               wxALIGN_CENTRE_HORIZONTAL), 1);
     hbox->Add(shfttext2, 1);
     vbox->Add(hbox, 0, wxEXPAND);
+
+    /* Add the angle slider to the vbox */
     hbox = new wxStaticBoxSizer(wxHORIZONTAL, this, ANGLE_LABEL);
     hbox->Add(anglsldr, SLIDERSCALE);
     hbox->Add(angltext, ENTRYSCALE);
     vbox->Add(hbox, 0, wxEXPAND);
     this->SetSizerAndFit(vbox);
 
+    /* Activ8te the check8ox and set floating-point valid8tors */
     enabld->SetValue(true);
     v.SetPrecision(2);
     shfttext1->SetValidator(v);
@@ -129,6 +155,7 @@ ShiftControl::ShiftControl(wxWindow *parent):
     angltext->Bind(wxEVT_TEXT, &ShiftControl::on_evt_rot_text, this);
 }
 
+
 void ShiftControl::get_affine(double affine[]) const noexcept
 {
     affine[0] = affine[3] = cos;
@@ -138,9 +165,11 @@ void ShiftControl::get_affine(double affine[]) const noexcept
     affine[5] = (x * affine[1] + y * affine[3]) * 10.0;
 }
 
+
 void ShiftControl::set_translation(double x, double y)
 {
     wxString str;
+
     this->x = (cos * x - sin * y) / 10.0;
     this->y = (sin * x + cos * y) / 10.0;
     str.Printf(wxT("%.2f"), this->x);
@@ -150,9 +179,11 @@ void ShiftControl::set_translation(double x, double y)
     post_change_event();
 }
 
+
 void ShiftControl::convert_coordinates(double *x, double *y) const noexcept
 {
     double tmp = *x;
+
     *x = cos * tmp - sin * *y - 10.0 * this->x;
     *y = sin * tmp + cos * *y - 10.0 * this->y;
 }

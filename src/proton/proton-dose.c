@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <math.h>
 
 #include <stdio.h>  /* DELETEME PL0X */
@@ -308,10 +309,17 @@ static ProtonDose *proton_dose_init(RTDose *dcm)
     return dose;
 }
 
-ProtonDose *proton_dose_create(const char *filename)
+ProtonDose *proton_dose_create(const char *filename, size_t ebufsz, char err[])
 {
     ProtonDose *dose;
-    RTDose *dcm = rtdose_create(filename);
+    RTDose *dcm;
+
+    /* If you see this then you probably have an allocation failure. I wasn't
+    careful enough with this file when I initially wrote it, and I'm too lazy
+    now to go through and isolate these functions. Still better than it was,
+    since the most frequent failure mode is DCMTK failing to load the RTDose */
+    snprintf(err, ebufsz, "Failed to load dose");
+    dcm = rtdose_create(filename, ebufsz, err);
     if (!dcm) {
         return NULL;
     }
@@ -355,7 +363,7 @@ double proton_dose_width(const ProtonDose *dose, int dim)
     return STATIC_CAST(double, dose->px_dimensions[dim]) * dose->px_spacing[dim];
 }
 
-void proton_dose_depth_range(const ProtonDose *dose, float range[_q(static 2)])
+void proton_dose_depth_range(const ProtonDose *dose, float range[])
 {
     range[0] = STATIC_CAST(float, proton_dose_min_depth(dose));
     range[1] = STATIC_CAST(float, proton_dose_max_depth(dose));
@@ -519,16 +527,17 @@ static void proton_dose_find_scan(const ProtonDose *dose, float *z,
 }
 
 /** REWRITEME: Not urgent */
-void proton_dose_get_plane(const ProtonDose *dose, int type,
-                           ProtonImage *img, float depth,
-                           void (*colormap)(float, unsigned char *))
+void proton_dose_get_plane(const ProtonDose        *dose,
+                           const ProtonPlaneParams *params,
+                           ProtonImage             *img,
+                           float                    depth)
 {
     const long axskip = dose->px_dimensions[0] * dose->px_dimensions[1];
     const long alim[2] = { dose->px_dimensions[0] - 1, dose->px_dimensions[2] - 1 };
     const long blim[2] = { proton_image_dimension(img, 0) - 1, proton_image_dimension(img, 1) - 1 };
     unsigned char *buf = proton_image_raw(img);
-    const float *dptr, *base = (type == PROTON_IMG_DOSE) ? dose->data : dose->grad;
-    const float norm = (type == PROTON_IMG_DOSE) ? dose->dmax : (0.03 * dose->dmax) / 0.5;//dose->px_spacing[1];
+    const float *dptr, *base = (params->type == PROTON_IMG_DOSE) ? dose->data : dose->grad;
+    const float norm = (params->type == PROTON_IMG_DOSE) ? dose->dmax : (params->pct_diff * dose->dmax) / params->depth_err;
     float interp[4];
     long a[2];
 
@@ -539,7 +548,7 @@ void proton_dose_get_plane(const ProtonDose *dose, int type,
             for (a[0] = 0; a[0] < alim[0]; a[0]++, dptr++) {
                 proton_dose_load_interpolant(interp, dptr, dose->px_dimensions[0],
                                              axskip, depth, norm);
-                proton_dose_interpolate_cell(interp, a, alim, blim, buf, colormap);
+                proton_dose_interpolate_cell(interp, a, alim, blim, buf, params->colormap);
             }
             dptr = dline + axskip;
         }

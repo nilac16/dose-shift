@@ -40,11 +40,18 @@ void MainApplication::initialize_main_window()
     cwnd->Bind(EVT_PLOT_OPEN, &MainApplication::on_plot_open, this);
 }
 
+void MainApplication::load_file(const wxString &path)
+{
+    canv->load_file(path.c_str());
+    pwnd->on_dicom_changed();
+}
+
 void MainApplication::on_dicom_load(wxFileDirPickerEvent &e)
 {
-    wxString str = e.GetPath();
-    canv->load_file(str.c_str());
-    pwnd->on_dicom_changed(e);
+    wxString str;
+    
+    str = e.GetPath();
+    load_file(e.GetPath());
 }
 
 void MainApplication::on_depth_change(wxCommandEvent &e)
@@ -92,6 +99,13 @@ void MainApplication::set_depth_range()
     float range[2];
     canv->get_depth_range(range);
     cwnd->set_depth_range(range[0], range[1]);
+}
+
+void MainApplication::dropped_file(const wxString &path)
+/** This works on Windows, but not GTK... Do I just #if __linux or something */
+{
+    lwnd->set_file(path);
+    load_file(path);
 }
 
 bool MainApplication::OnInit()

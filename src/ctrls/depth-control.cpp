@@ -22,7 +22,9 @@ void DepthControl::on_evt_slider(wxScrollEvent &e)
 
 void DepthControl::on_evt_text(wxCommandEvent &e)
 {
-    wxString str = e.GetString();
+    wxString str;
+    
+    str = e.GetString();
     if (str.IsEmpty()) {
         e.Skip();
     } else {

@@ -9,7 +9,7 @@ wxDECLARE_EVENT(EVT_SHIFT_CONTROL, wxCommandEvent);
 
 
 class ShiftControl : public wxPanel {
-    wxCheckBox* enabld;
+    wxCheckBox *enabld;
     wxButton *reset;
     wxTextCtrl *shfttext1, *shfttext2;
     wxSlider *anglsldr;
@@ -19,7 +19,7 @@ class ShiftControl : public wxPanel {
 
     void post_change_event();
 
-    void write_trig_functions(double degrees);
+    void write_trig_functions(double degrees) noexcept;
 
     void on_evt_checkbox(wxCommandEvent &e);
     void on_evt_button(wxCommandEvent &e);

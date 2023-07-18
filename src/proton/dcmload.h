@@ -3,6 +3,8 @@
 #ifndef DCM_LOAD_H
 #define DCM_LOAD_H
 
+#include <stddef.h>
+
 #if __cplusplus
 extern "C" {
 #else
@@ -13,7 +15,7 @@ extern "C" {
 typedef struct _dicom_rtdose RTDose;
 
 
-RTDose *rtdose_create(const char *filename);
+RTDose *rtdose_create(const char *filename, size_t ebufsz, char err[]);
 void rtdose_destroy(RTDose *dcm);
 
 /* None of these do any NULL checking */

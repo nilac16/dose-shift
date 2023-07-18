@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.15)
 
 project(main)
 
@@ -12,8 +12,9 @@ find_package(DCMTK COMPONENTS dcmrt REQUIRED)
 
 if (MSVC)
     set(WIN_NATIVE WIN32)
-    set(USER_CXX_FLAGS "/O2 /W3 -D_CRT_SECURE_NO_DEPRECATE /arch:AVX2 /GL-")
+    set(USER_CXX_FLAGS "/O2 /W3 -D_CRT_SECURE_NO_DEPRECATE /arch:AVX2 /GL- /Zc:__cplusplus")
     set(USER_C_FLAGS "/O2 /W3 -D_CRT_SECURE_NO_DEPRECATE /arch:AVX2 /std:c17 /GL-")
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 else ()
     if (FULL_DEBUG)
         set(USER_CXX_FLAGS "-g3 -Og -Wall -Wextra")
@@ -41,3 +42,4 @@ add_executable(${PROJECT_NAME} ${WIN_NATIVE}
 target_link_libraries(${PROJECT_NAME}
     PRIVATE ${wxWidgets_LIBRARIES}
     PUBLIC proton)
+

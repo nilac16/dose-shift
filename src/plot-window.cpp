@@ -70,7 +70,7 @@ PlotWindow::PlotWindow(wxWindow *parent):
     wxImage::AddHandler(new wxPNGHandler);
 }
 
-void PlotWindow::on_dicom_changed(wxCommandEvent &WXUNUSED(e))
+void PlotWindow::on_dicom_changed(/* wxCommandEvent &WXUNUSED(e) */)
 {
     if (wxGetApp().dose_loaded()) {
         ldplot->write_axes();

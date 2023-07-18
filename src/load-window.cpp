@@ -18,15 +18,18 @@ LoadWindow::LoadWindow(wxWindow *parent):
 
 wxString LoadWindow::get_directory() const
 {
-    wxString str = fctrl->GetPath();
+    wxFileName path;
+    wxString str;
+    
+    str = fctrl->GetPath();
     if (!str.empty()) {
-        wxFileName path(str);
+        path = str;
         str = path.GetPath();
     }
     return str;
 }
 
-void LoadWindow::set_directory(const wxString &dir)
+void LoadWindow::set_file(const wxString &path)
 {
-    fctrl->SetPath(dir);
+    fctrl->SetPath(path);
 }

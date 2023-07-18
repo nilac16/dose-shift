@@ -4,32 +4,30 @@
 #define VISUALISER_CONTROL_H
 
 #include <wx/wx.h>
+#include "../proton/proton-dose.h"
 
 wxDECLARE_EVENT(EVT_VISUAL_CONTROL, wxCommandEvent);
 
 
 class VisualControl: public wxPanel {
     wxCheckBox *cbox;
-    wxChoice *lbox;
+    wxButton *reset;
+    wxTextCtrl *diff, *derr;
 
-    /** I *could* have typedef'd this, but I'm feeling really abstruse right now */
-    void (*cmap_func)(float, unsigned char *);
-    int mode;
+    ProtonPlaneParams params;
 
     static const wxArrayString &choices() noexcept;
 
     void post_changed_event();
 
-    void write_cmap();
-
     void on_evt_checkbox(wxCommandEvent &e);
-    void on_evt_choice(wxCommandEvent &e);
+    void on_evt_difftext(wxCommandEvent &e);
+    void on_evt_errtext(wxCommandEvent &e);
 
 public:
     VisualControl(wxWindow *parent);
 
-    void (*colormap() const noexcept)(float, unsigned char *){ return cmap_func; }
-    int visuals() const noexcept { return mode; }
+    const ProtonPlaneParams &visuals() const noexcept { return params; }
 };
 
 

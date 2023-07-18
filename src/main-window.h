@@ -19,6 +19,8 @@ class MainApplication : public wxApp {
 
     void initialize_main_window();
 
+    void load_file(const wxString &path);
+
     void on_dicom_load(wxFileDirPickerEvent &e);
     void on_depth_change(wxCommandEvent &e);
     void on_plot_change(wxCommandEvent &e);
@@ -54,8 +56,9 @@ public:
 
     inline void convert_coordinates(double *x, double *y) const noexcept { cwnd->convert_coordinates(x, y); }
 
-    void (*colormap() const noexcept)(float, unsigned char *) { return cwnd->colormap(); }
-    int visuals() const noexcept { return cwnd->visuals(); }
+    const ProtonPlaneParams &visuals() const noexcept { return cwnd->visuals(); }
+
+    void dropped_file(const wxString &path);
 
     virtual bool OnInit() override;
 };
