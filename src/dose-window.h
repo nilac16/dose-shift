@@ -19,7 +19,10 @@ class DoseWindow : public wxWindow {
     public:
         DoseDragNDrop() = default;
 
-        virtual bool OnDropFiles(wxCoord WXUNUSED(x), wxCoord WXUNUSED(y), const wxArrayString &filenames) override;
+        virtual bool OnDropFiles(wxCoord              WXUNUSED(x),
+                                 wxCoord              WXUNUSED(y),
+                                 const wxArrayString &filenames)
+            override;
     } *droptarget;
 
     double affine[6];
@@ -54,7 +57,8 @@ public:
     void on_plot_changed(wxCommandEvent &e);
     void on_shift_changed(wxCommandEvent &e);
 
-    inline void get_depth_range(float range[]) const noexcept { proton_dose_depth_range(dose, range); }
+    void get_depth_range(float range[])
+        const noexcept { proton_dose_depth_range(dose, range); }
 
     constexpr const ProtonDose *get_dose() const noexcept { return dose; }
     void unload_dose() noexcept;

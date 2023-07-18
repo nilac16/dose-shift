@@ -211,7 +211,6 @@ void PlotControl::get_ld_measurements(std::vector<std::tuple<double, double>> &m
 
 
 void PlotControl::get_pd_measurements(std::vector<std::tuple<double, double>> &meas) const
-#warning "Averaging algorithm needs to be rewritten"
 {
     std::map<double, std::vector<std::pair<double, long>>> map;
 

@@ -598,7 +598,6 @@ void proton_cmap_turbo(float x, unsigned char px[])
 
 
 void proton_cmap_gradient(float x, unsigned char px[])
-/** Do something similar to gamma here I guess */
 {
     x = fabsf(x);
     if (x < 1.0f) {
@@ -615,5 +614,15 @@ void proton_cmap_gradient(float x, unsigned char px[])
 
 double proton_buildup(double theor)
 {
-    return (theor - 0.8) / 1.02;
+    return (theor - 8) / 1.02;
+}
+
+
+double proton_buildup_err(double theor)
+{
+    double depth, actual;
+
+    depth = proton_buildup(theor);
+    actual = round(depth);
+    return fabs(actual - depth);
 }

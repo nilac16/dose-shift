@@ -31,7 +31,7 @@ void PlotWindow::on_context_menu_selection(wxCommandEvent &e)
                 wxTheClipboard->SetData(new wxBitmapDataObject(bmp));
                 wxTheClipboard->Close();
             }
-            delete gc; // omfg stop forgetting to do this
+            delete gc;
         }
         break;
     case 2:

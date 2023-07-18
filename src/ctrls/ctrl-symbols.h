@@ -11,14 +11,15 @@
 #define DEPTH_LABEL     wxT("Slice depth (mm)")
 #define DEPTH_INIT_MAX  300
 
-#define VISUAL_LABEL    wxT("Visualizer")
+#define VISUAL_LABEL    wxT("Parameters")
 
 #define GRADIENT_LABEL  wxT("Gradient")
 #define GRADIENT_SHOW   wxT("Show gradient")
+#define GRADIENT_AUTO   wxT("Automatic depth error")
 #define GRAD_RESET      wxT("Reset")
-#define GRAD_DIFFLBL    wxT("% diff")
+#define GRAD_DIFFLBL    wxT("% dose difference")
 #define GRAD_DIFFINIT   wxT("3.0")
-#define GRAD_ERRLBL     wxT("Offset (mm)")
+#define GRAD_ERRLBL     wxT("Depth error (mm)")
 #define GRAD_ERRINIT    wxT("0.50")
 
 #define PLOT_LABEL      wxT("Line dose")

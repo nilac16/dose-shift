@@ -7,9 +7,15 @@
 
 LoadWindow::LoadWindow(wxWindow *parent):
     wxPanel(parent),
-    fctrl(new wxFilePickerCtrl(this, wxID_ANY, wxEmptyString, LOAD_TITLE, LOAD_FILTER))
+    fctrl(new wxFilePickerCtrl(this,
+                               wxID_ANY,
+                               wxEmptyString,
+                               LOAD_TITLE,
+                               LOAD_FILTER))
 {
-    wxBoxSizer *hbox = new wxStaticBoxSizer(wxHORIZONTAL, this, LOAD_FRAME);
+    wxBoxSizer *hbox;
+    
+    hbox = new wxStaticBoxSizer(wxHORIZONTAL, this, LOAD_FRAME);
     hbox->AddStretchSpacer();
     hbox->Add(fctrl, 3, wxEXPAND | wxHORIZONTAL);
     hbox->AddStretchSpacer();

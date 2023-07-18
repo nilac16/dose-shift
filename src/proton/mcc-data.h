@@ -41,7 +41,7 @@ typedef struct _mcc_data {
             double x, dose;
         } data[];
     } *scans[];
-#endif
+#endif /* C ONLY */
 } MCCData;
 
 MCCData *mcc_data_create(const char *filename, int *stat);

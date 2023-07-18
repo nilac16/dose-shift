@@ -23,19 +23,18 @@
 #define IMAGE_AXFONT_SIZE  20   /* Axis titles */
 #define IMAGE_TIKFONT_SIZE 14   /* Axis tick labels */
 
-#define DEPTH_AXLABEL   wxT("Depth (cm)")
+#define DEPTH_AXLABEL   wxT("Depth (mm)")
 #define DOSE_AXLABEL    wxT("Dose (Gy)")
 #define PLANE_AXLABEL   wxT("Average planar dose (Gy)")
 #define PDIFF_AXLABEL   wxT("% Dose difference")
 
 #ifndef M_PI_2
-/* lmao this might be a bad idea */
 constexpr double M_PI_2 = 1.57079632679489661923;
 #endif
 
 
 class ProtonPlot : public wxWindow {
-    void on_evt_paint(wxPaintEvent &e); /* Pure virtual function call danger */
+    void on_evt_paint(wxPaintEvent &e);
 
     virtual void write_xaxis() = 0;
     virtual void write_yaxis() = 0;
@@ -69,7 +68,7 @@ public:
                const wxString &ylabel, const wxString &plabel);
 
     virtual void draw_plot(wxGraphicsContext *gc) = 0;
-    void write_axes(); /* Pure virtual function call danger */
+    void write_axes();
 };
 
 

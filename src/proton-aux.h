@@ -23,11 +23,20 @@ void proton_cmap_gradient(float x, unsigned char px[]);
 /** @brief Compute the physical solid water buildup required to create an
  *      apparent depth of @p theor to the proton beam
  *  @param theor
- *      The theoretical depth of water to be measured, in CENTIMETERS
- *  @returns The required physical buildup of solid water, in centimeters
+ *      The theoretical depth to be measured, in millimeters
+ *  @returns The required physical buildup of solid water, in millimeters
  *  @todo Maybe add a parameters struct to make this more generic
  */
 double proton_buildup(double theor);
+
+
+/** @brief Compute the error in buildup depth
+ *  @param theor
+ *      Theoretical depth to be measured
+ *  @returns The absolute difference between the actual physical buildup and the
+ *      nearest millimeter depth
+ */
+double proton_buildup_err(double theor);
 
 
 #if __cplusplus

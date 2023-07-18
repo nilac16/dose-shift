@@ -3,7 +3,9 @@
 #include "proton-aux.h"
 
 
-bool DoseWindow::DoseDragNDrop::OnDropFiles(wxCoord, wxCoord, const wxArrayString &filenames)
+bool DoseWindow::DoseDragNDrop::OnDropFiles(wxCoord              WXUNUSED(x),
+                                            wxCoord              WXUNUSED(y),
+                                            const wxArrayString &filenames)
 {
     if (filenames.size() != 1) {
         return false;
@@ -22,7 +24,9 @@ void DoseWindow::paint_detector(wxPaintDC &dc)
         static_cast<double>(proton_image_dimension(img, 0)) / proton_dose_width(dose, 0),
         static_cast<double>(proton_image_dimension(img, 1)) / proton_dose_width(dose, 2)
     }; */
-    wxGraphicsContext *gc = wxGraphicsContext::Create(dc);
+    wxGraphicsContext *gc;
+    
+    gc = wxGraphicsContext::Create(dc);
     gc->Scale(conv[0], conv[1]);
     gc->Translate(-proton_dose_origin(dose, 0), -proton_dose_origin(dose, 2));
     gc->SetPen(*wxBLACK_PEN);
@@ -45,8 +49,10 @@ void DoseWindow::paint_detector(wxPaintDC &dc)
     } */
     gc->PopState();
     {
-        wxGraphicsPath p = gc->CreatePath();
+        wxGraphicsPath p;
         double ldx, ldy;
+
+        p = gc->CreatePath();
         wxGetApp().get_line_dose(&ldx, &ldy);
         gc->Translate(ldx, ldy);
         p.MoveToPoint(0.0, -xhair);
@@ -59,18 +65,23 @@ void DoseWindow::paint_detector(wxPaintDC &dc)
     delete gc;
 }
 
+
 void DoseWindow::paint_bitmap(wxPaintDC &dc)
 {
-    const wxSize psz(
-        proton_image_dimension(img, 0), proton_image_dimension(img, 1));
+    wxSize psz;
+
+    psz = wxSize(proton_image_dimension(img, 0),
+                 proton_image_dimension(img, 1));
     dc.SetClippingRegion(origin, psz);
     dc.SetDeviceOrigin(origin.x, origin.y);
     dc.DrawBitmap(wxImage(psz, proton_image_raw(img), true), 0, 0);
 }
 
+
 void DoseWindow::on_paint(wxPaintEvent &WXUNUSED(e))
 {
     wxPaintDC dc(this);
+
     if (dose_loaded() && !proton_image_empty(img)) {
         paint_bitmap(dc);
         if (wxGetApp().detector_enabled()) {
@@ -78,6 +89,7 @@ void DoseWindow::on_paint(wxPaintEvent &WXUNUSED(e))
         }
     }
 }
+
 
 void DoseWindow::on_size(wxSizeEvent &e)
 {
@@ -88,12 +100,15 @@ void DoseWindow::on_size(wxSizeEvent &e)
     }
 }
 
+
 void DoseWindow::on_lmb(wxMouseEvent &e)
 {
+    double x, y;
+    wxPoint p;
+
     if (dose_loaded()) {
-        wxPoint p = e.GetPosition();
+        p = e.GetPosition();
         if (point_in_dose(p)) {
-            double x, y;
             /* const double conv[2] = {
                 static_cast<double>(proton_image_dimension(img, 0)) / proton_dose_width(dose, 0),
                 static_cast<double>(proton_image_dimension(img, 1)) / proton_dose_width(dose, 2)
@@ -108,12 +123,15 @@ void DoseWindow::on_lmb(wxMouseEvent &e)
     e.Skip();
 }
 
+
 void DoseWindow::on_rmb(wxMouseEvent &e)
 {
+    double x, y;
+    wxPoint p;
+
     if (dose_loaded()) {
-        wxPoint p = e.GetPosition();
+        p = e.GetPosition();
         if (point_in_dose(p)) {
-            double x, y;
             /* const double conv[2] = {
                 static_cast<double>(proton_image_dimension(img, 0)) / proton_dose_width(dose, 0),
                 static_cast<double>(proton_image_dimension(img, 1)) / proton_dose_width(dose, 2)
@@ -128,6 +146,7 @@ void DoseWindow::on_rmb(wxMouseEvent &e)
     e.Skip();
 }
 
+
 void DoseWindow::on_motion(wxMouseEvent &e)
 {
     if (e.LeftIsDown()) {
@@ -139,39 +158,28 @@ void DoseWindow::on_motion(wxMouseEvent &e)
     }
 }
 
+
 void DoseWindow::conv_write()
 {
     conv[0] = static_cast<double>(proton_image_dimension(img, 0)) / proton_dose_width(dose, 0);
     conv[1] = static_cast<double>(proton_image_dimension(img, 1)) / proton_dose_width(dose, 2);
 }
 
+
 void DoseWindow::affine_write()
 {
-    /* As it turns out, composing affine transformations by matrix 
-    multiplication does not have the expected effect on the state of a 
-    wxGraphicsContext. Unless I can determine a cause/fix (including 
-    potential programmer error), this function and the class member it
-    writes to are largely obsolete.
-
-    const double conv[2] = {
-        static_cast<double>(proton_image_dimension(img, 0)) / proton_dose_width(dose, 0),
-        static_cast<double>(proton_image_dimension(img, 1)) / proton_dose_width(dose, 2)
-    };
-    double tmp[6];
-    affine[0] = conv[0];
-    affine[3] = conv[1];
-    affine[1] = affine[2] = 0.0;
-    affine[4] = static_cast<double>(origin.x) - proton_dose_origin(dose, 0) * conv[0];
-    affine[5] = static_cast<double>(origin.y) - proton_dose_origin(dose, 2) * conv[1]; */
     wxGetApp().get_detector_affine(affine);
-    /* proton_affine_matmul(tmp, affine); */
 }
+
 
 void DoseWindow::image_write()
 {
-    float depth = wxGetApp().get_depth();
+    float depth;
+    
+    depth = wxGetApp().get_depth();
     proton_dose_get_plane(dose, &wxGetApp().visuals(), img, depth);
 }
+
 
 void DoseWindow::image_realloc_and_write(const wxSize &csz)
 {
@@ -179,6 +187,7 @@ void DoseWindow::image_realloc_and_write(const wxSize &csz)
     const float clientratio = static_cast<float>(W) / static_cast<float>(H);
     const float imgratio = proton_dose_coronal_aspect(dose);
     int w, h;
+
     if (clientratio < imgratio) {
         w = W;
         h = static_cast<int>(static_cast<float>(W) / imgratio);
@@ -200,22 +209,32 @@ void DoseWindow::image_realloc_and_write(const wxSize &csz)
     }
 }
 
+
 bool DoseWindow::point_in_dose(const wxPoint &p)
 {
     const wxRect clip(origin, wxSize(proton_image_dimension(img, 0),
         proton_image_dimension(img, 1)));
+
     return clip.Contains(p);
 }
 
-void DoseWindow::write_line_dose() noexcept
+
+void DoseWindow::write_line_dose()
+    noexcept
 {
     double x, y;
+
     wxGetApp().get_line_dose(&x, &y);
     proton_dose_get_line(dose, x, y);
 }
 
+
 DoseWindow::DoseWindow(wxWindow *parent):
-    wxWindow(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxFULL_REPAINT_ON_RESIZE),
+    wxWindow(parent,
+             wxID_ANY,
+             wxDefaultPosition,
+             wxDefaultSize,
+             wxFULL_REPAINT_ON_RESIZE),
     dose(nullptr),
     img(nullptr),
     droptarget(new DoseDragNDrop)
@@ -235,17 +254,16 @@ DoseWindow::DoseWindow(wxWindow *parent):
     this->SetDropTarget(droptarget);
 }
 
+
 DoseWindow::~DoseWindow()
 {
     proton_image_destroy(img);
     proton_dose_destroy(dose);
 }
 
+
 void DoseWindow::load_file(const char *filename)
 {
-    /* This is because I'm tired of presenting the user with a useless error
-    message. That still happens, though, because I incurred a large amount of
-    technical debt in the dose file */
     char err[1024] = { 0 };
 
     proton_dose_destroy(dose);
@@ -262,11 +280,13 @@ void DoseWindow::load_file(const char *filename)
     this->Refresh();
 }
 
+
 void DoseWindow::on_depth_changed(wxCommandEvent &WXUNUSED(e))
 {
     image_write();
     this->Refresh();
 }
+
 
 void DoseWindow::on_plot_changed(wxCommandEvent &WXUNUSED(e))
 {
@@ -278,13 +298,16 @@ void DoseWindow::on_plot_changed(wxCommandEvent &WXUNUSED(e))
     write_line_dose();
 }
 
+
 void DoseWindow::on_shift_changed(wxCommandEvent &WXUNUSED(e))
 {
     affine_write();
     this->Refresh();
 }
 
-void DoseWindow::unload_dose() noexcept
+
+void DoseWindow::unload_dose()
+    noexcept
 {
     proton_dose_destroy(dose);
     dose = nullptr;

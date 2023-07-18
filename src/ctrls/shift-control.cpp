@@ -133,7 +133,6 @@ ShiftControl::ShiftControl(wxWindow *parent):
     vbox->Add(hbox, 0, wxEXPAND);
     this->SetSizerAndFit(vbox);
 
-    /* Activ8te the check8ox and set floating-point valid8tors */
     enabld->SetValue(true);
     v.SetPrecision(2);
     shfttext1->SetValidator(v);

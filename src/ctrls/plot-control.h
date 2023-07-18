@@ -53,7 +53,7 @@ class PlotControl : public wxPanel {
 public:
     PlotControl(wxWindow *parent);
 
-    inline void get_point(double *x, double *y) const noexcept { *x = this->x; *y = this->y; }
+    void get_point(double *x, double *y) const noexcept { *x = this->x; *y = this->y; }
     void set_point(double x, double y);
 
     void get_ld_measurements(std::vector<std::tuple<double, double>> &meas) const;

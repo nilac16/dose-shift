@@ -34,7 +34,7 @@ typedef struct _proton_dose {
     float *grad;
 #if !defined(__cplusplus) || !__cplusplus
     float data[];
-#endif
+#endif /* C ONLY */
 } ProtonDose;
 
 
@@ -56,7 +56,8 @@ void proton_dose_depth_range(const ProtonDose *dose, float range[]);
 float proton_dose_coronal_aspect(const ProtonDose *dose);
 
 /** Interpolates the value of the line dose at @p depth from the currently
- *  held line dose array */
+ *  held line dose array
+ */
 double proton_line_get_dose(const ProtonDose *dose, double depth);
 
 /** Interpolates the line dose at (x, y) onto the linedose array in @c dose */
@@ -67,7 +68,8 @@ inline const float *proton_planes_raw(const ProtonDose *dose) { return dose->pla
 inline const float *proton_stppwr_raw(const ProtonDose *dose) { return dose->stppwr; }
 
 /** @warning This value is NOT stored in the dose struct, so this function
- *  COMPUTES the result! */
+ *      COMPUTES the result!
+ */
 float proton_planes_max(const ProtonDose *dose);
 float proton_stppwr_max(const ProtonDose *dose);
 
@@ -83,7 +85,7 @@ typedef struct _proton_image {
     
 #if !defined(__cplusplus) || !__cplusplus
     unsigned char buf[];
-#endif
+#endif /* C ONLY */
 } ProtonImage;
 
 
@@ -97,8 +99,6 @@ inline bool proton_image_empty(const ProtonImage *img) { return img->dim[0] == 0
 
 
 /** I guess we just fetch this from the visualizer control
- *  It might be useful to pass this pointer around to the main app class, so it
- *  can be sent around
  */
 typedef struct _proton_plane_params {
     enum {

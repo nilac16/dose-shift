@@ -1,8 +1,6 @@
 #include <errno.h>
 #include <math.h>
-
-#include <stdio.h>  /* DELETEME PL0X */
-
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "proton-dose.h"
@@ -37,21 +35,20 @@ static float maxf(float x, float y)
 
 static float proton_planes_lebesgue_dose(const ProtonDose *dose)
 {
-    /** Constant measure
-     *  Consists of:
-     *    - Area of a coronal slice (in m²)
-     *    - Density of water (10³ kg m⁻³)
-     */
     return STATIC_CAST(double,
         (dose->px_spacing[0] * dose->px_spacing[2]) * 1e-3);
 }
 
+
 static void proton_planes_integrate(ProtonDose *dose)
 {
     const float *f1 = dose->data, *f2 = dose->data + dose->px_dimensions[0];
+    /* Not checking those pointers there chief... You better hope 64-bit Windows
+    never fails allocating memory */
     float *pmax = calloc(dose->px_dimensions[1], sizeof *pmax);
     long *nsupp = calloc(dose->px_dimensions[1], sizeof *nsupp);
     long j, k;
+
     /* Raw sum and compute planar maxima */
     for (k = 0; k < dose->px_dimensions[2]; k++) {
         for (j = 0; j < dose->px_dimensions[1]; j++) {
@@ -90,6 +87,7 @@ static void proton_planes_constrict(ProtonDose *dose)
     const float threshold = STATIC_CAST(double, NULL_THRESH * dose->dmax);
     void *testptr;
     long i, end;
+
     for (i = end = 0; i < dose->px_dimensions[1]; i++) {
         end = (dose->planes[i] > threshold) ? i : end;
     }
@@ -109,7 +107,7 @@ static void proton_planes_create(ProtonDose *dose)
 {
     dose->planes = calloc(dose->px_dimensions[1], sizeof *dose->planes);
     dose->stppwr = calloc(dose->px_dimensions[1], sizeof *dose->stppwr);
-    if (dose->planes) {
+    if (dose->planes && dose->stppwr) {
         proton_planes_integrate(dose);
         proton_planes_constrict(dose);
     }
@@ -317,7 +315,7 @@ ProtonDose *proton_dose_create(const char *filename, size_t ebufsz, char err[])
     /* If you see this then you probably have an allocation failure. I wasn't
     careful enough with this file when I initially wrote it, and I'm too lazy
     now to go through and isolate these functions. Still better than it was,
-    since the most frequent failure mode is DCMTK failing to load the RTDose */
+    since the most frequent failure state is DCMTK failing to load the RTDose */
     snprintf(err, ebufsz, "Failed to load dose");
     dcm = rtdose_create(filename, ebufsz, err);
     if (!dcm) {
@@ -470,11 +468,6 @@ static void proton_dose_fcast(float dst[_q(restrict static 2)],
     dst[1] = STATIC_CAST(float, src[1]);
 }
 
-/** REWRITEME: Add more function calls, this context's alphabet is a little 
- *  too big:
- *      - b0: Could be fused into a row-writing function
- *      - px: Could be calculated and bound to a function's argument 
- */
 static void proton_dose_interpolate_cell(const float interp[_q(static 4)],
                                          const long a[_q(static 2)],
                                          const long alim[_q(static 2)],
@@ -526,7 +519,6 @@ static void proton_dose_find_scan(const ProtonDose *dose, float *z,
     *z -= flz;
 }
 
-/** REWRITEME: Not urgent */
 void proton_dose_get_plane(const ProtonDose        *dose,
                            const ProtonPlaneParams *params,
                            ProtonImage             *img,

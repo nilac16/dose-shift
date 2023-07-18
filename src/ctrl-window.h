@@ -21,6 +21,8 @@ public:
 
     inline float get_depth() const { return static_cast<float>(dcon->get_value()); }
 
+    void on_depth_changed(wxCommandEvent &e) { vcon->on_depth_changed(e); }
+
     /** Sets the valid integer slider depths to [ceil(min), floor(max)] */
     void set_depth_range(float min, float max);
     inline double get_max_slider_depth() const { return static_cast<double>(dcon->get_max()); }

@@ -11,11 +11,11 @@
 
 
 class MainApplication : public wxApp {
-    wxFrame *frame;
-    DoseWindow *canv;
-    CtrlWindow *cwnd;
-    LoadWindow *lwnd;
-    PlotWindow *pwnd;
+    wxFrame *m_frame;
+    DoseWindow *m_canv;
+    CtrlWindow *m_cwnd;
+    LoadWindow *m_lwnd;
+    PlotWindow *m_pwnd;
 
     void initialize_main_window();
 
@@ -28,35 +28,65 @@ class MainApplication : public wxApp {
     void on_visual_change(wxCommandEvent &e);
     void on_plot_open(wxCommandEvent &e);
 
+
+    wxFrame *&main_frame() noexcept { return m_frame; }
+    DoseWindow *&canvas() noexcept { return m_canv; }
+    CtrlWindow *&ctrl_wnd() noexcept { return m_cwnd; }
+    LoadWindow *&load_wnd() noexcept { return m_lwnd; }
+    PlotWindow *&plot_wnd() noexcept { return m_pwnd; }
+
+    const wxFrame *main_frame() const noexcept { return m_frame; }
+    const DoseWindow *canvas() const noexcept { return m_canv; }
+    const CtrlWindow *ctrl_wnd() const noexcept { return m_cwnd; }
+    const LoadWindow *load_wnd() const noexcept { return m_lwnd; }
+    const PlotWindow *plot_wnd() const noexcept { return m_pwnd; }
+
+
 public:
-    inline float get_depth() const { return cwnd->get_depth(); }
+    float get_depth() const { return ctrl_wnd()->get_depth(); }
     void set_depth_range();
 
-    inline bool detector_enabled() const { return cwnd->detector_enabled(); }
-    inline void get_detector_affine(double affine[]) const noexcept { cwnd->get_detector_affine(affine); }
+    bool detector_enabled() const { return ctrl_wnd()->detector_enabled(); }
 
-    inline void get_line_dose(double *x, double *y) const noexcept { cwnd->get_line_dose(x, y); }
-    inline void set_line_dose(double x, double y) { cwnd->set_line_dose(x, y); }
+    void get_detector_affine(double affine[])
+        const noexcept { ctrl_wnd()->get_detector_affine(affine); }
 
-    inline void set_translation(double x, double y) { cwnd->set_translation(x, y); }
+    void get_line_dose(double *x, double *y)
+        const noexcept { ctrl_wnd()->get_line_dose(x, y); }
 
-    constexpr bool dose_loaded() const noexcept { return canv->dose_loaded(); }
-    constexpr const ProtonDose *get_dose() const noexcept { return canv->get_dose(); }
+    void set_line_dose(double x, double y) { ctrl_wnd()->set_line_dose(x, y); }
 
-    inline double get_max_slider_depth() const { return cwnd->get_max_slider_depth(); }
-    inline double get_max_dose() const noexcept { return static_cast<double>(proton_dose_max(get_dose())); }
+    void set_translation(double x, double y)
+        { ctrl_wnd()->set_translation(x, y); }
 
-    inline void unload_dose() noexcept { canv->unload_dose(); }
+    bool dose_loaded() const noexcept { return canvas()->dose_loaded(); }
 
-    inline void get_ld_measurements(std::vector<std::tuple<double, double>> &meas) const { cwnd->get_ld_measurements(meas); }
-    inline void get_pd_measurements(std::vector<std::tuple<double, double>> &meas) const { cwnd->get_pd_measurements(meas); }
-    inline void get_sp_measurements(std::vector<std::tuple<double, double>> &meas) const { cwnd->get_sp_measurements(meas); }
+    const ProtonDose *get_dose() const noexcept { return canvas()->get_dose(); }
 
-    inline wxString get_RS_directory() const { return lwnd->get_directory(); }
+    double get_max_slider_depth()
+        const { return ctrl_wnd()->get_max_slider_depth(); }
 
-    inline void convert_coordinates(double *x, double *y) const noexcept { cwnd->convert_coordinates(x, y); }
+    double get_max_dose()
+        const noexcept { return (double)proton_dose_max(get_dose()); }
 
-    const ProtonPlaneParams &visuals() const noexcept { return cwnd->visuals(); }
+    void unload_dose() noexcept { canvas()->unload_dose(); }
+
+    void get_ld_measurements(std::vector<std::tuple<double, double>> &meas)
+        const { ctrl_wnd()->get_ld_measurements(meas); }
+
+    void get_pd_measurements(std::vector<std::tuple<double, double>> &meas)
+        const { ctrl_wnd()->get_pd_measurements(meas); }
+
+    void get_sp_measurements(std::vector<std::tuple<double, double>> &meas)
+        const { ctrl_wnd()->get_sp_measurements(meas); }
+
+    wxString get_RS_directory() const { return load_wnd()->get_directory(); }
+
+    void convert_coordinates(double *x, double *y)
+        const noexcept { ctrl_wnd()->convert_coordinates(x, y); }
+
+    const ProtonPlaneParams &visuals()
+        const noexcept { return ctrl_wnd()->visuals(); }
 
     void dropped_file(const wxString &path);
 

@@ -24,21 +24,21 @@ typedef int (*__compar_fn_t)(const void *, const void *);
 /** Backus-Naur rules
  *  <file>          ::= "BEGIN_SCAN_DATA" <file-contents> "END_SCAN_DATA"
  *  <file-contents> ::= <kv-list> <scan-list> [<kv-list>?]
- * 
+ *
  *  <kv-list> ::= [<kv-pair>] <kv-list>
  *  <kv-pair> ::= <key> "=" <value>
- * 
+ *
  *  <scan-list>  ::= [<scan>] <scan-list>
- * 
+ *
  *  <scan>       ::= <scan-begin> <scan-contents> <scan-end>
  *  <scan-begin> ::= "BEGIN_SCAN" <scan-index>
  *  <scan-end>   ::= "END_SCAN" <scan-index>
- * 
+ *
  *  <scan-contents> ::= <kv-list> <data> [<kv-list>?]
- * 
+ *
  *  <data>          ::= "BEGIN_DATA" <data-contents> "END_DATA"
  *  <data-contents> ::= <data-pos> <data-dose> <data-idx>
- *  <datum-idx>     ::= "#" <datum-idx>
+ *  <data-idx>     ::= "#" <datum-idx>
  */
 
 
@@ -55,13 +55,16 @@ const char *mcc_get_error(int err)
         "Unclassifiable statement",
     };
     static const int nstrings = sizeof errstrings / sizeof *errstrings;
+
     return (err > 0 && err < nstrings) ? errstrings[err] : NULL;
 }
 
 
 static struct mcc_scan *mcc_scan_alloc(double y, unsigned initsz, jmp_buf env)
 {
-    struct mcc_scan *scan = malloc(sizeof *scan + sizeof *scan->data * initsz);
+    struct mcc_scan *scan;
+
+    scan = malloc(sizeof *scan + sizeof *scan->data * initsz);
     if (scan) {
         scan->sz = 0;
         scan->_cap = initsz;
@@ -72,11 +75,15 @@ static struct mcc_scan *mcc_scan_alloc(double y, unsigned initsz, jmp_buf env)
     return scan;
 }
 
+
 static void mcc_scan_push_back(struct mcc_scan **scan, double x, double dose, jmp_buf env)
 {
+    unsigned newcap;
+    void *newptr;
+
     if ((*scan)->sz == (*scan)->_cap) {
-        const unsigned newcap = (*scan)->_cap * 2;
-        void *newptr = realloc(*scan, sizeof **scan + sizeof *(*scan)->data * newcap);
+        newcap = (*scan)->_cap * 2;
+        newptr = realloc(*scan, sizeof **scan + sizeof *(*scan)->data * newcap);
         if (newptr) {
             *scan = newptr;
             (*scan)->_cap = newcap;
@@ -89,11 +96,15 @@ static void mcc_scan_push_back(struct mcc_scan **scan, double x, double dose, jm
     (*scan)->sz++;
 }
 
+
 static void mcc_data_push_scan(MCCData **data, double y, jmp_buf env)
 {
+    unsigned newcap;
+    void *newptr;
+
     if ((*data)->sz == (*data)->_cap) {
-        const unsigned int newcap = (*data)->_cap * 2;
-        void *newptr = realloc(*data, sizeof **data + sizeof *(*data)->scans);
+        newcap = (*data)->_cap * 2;
+        newptr = realloc(*data, sizeof **data + sizeof *(*data)->scans);
         if (newptr) {
             *data = newptr;
             (*data)->_cap = newcap;
@@ -104,6 +115,7 @@ static void mcc_data_push_scan(MCCData **data, double y, jmp_buf env)
     (*data)->scans[(*data)->sz] = mcc_scan_alloc(y, INIT_DATACAP, env);
     (*data)->sz++;
 }
+
 
 struct mcc_stmt {
     enum {
@@ -155,17 +167,18 @@ static const char *delims[] = {
 };
 
 
-/** Reimplementation of strtok that delimits on all whitespace, as 
+/** Reimplementation of strtok that delimits on all whitespace, as
  *  determined by isspace(3)
  *  If @p s is at end-of-string, BOTH @p s and @p endptr are set to NULL!
- *  \param s      Pointer to pointer to start of string. Set to NULL at 
+ *  \param s      Pointer to pointer to start of string. Set to NULL at
  *      end of string ONLY
- *  \param endptr Pointer to char * that will be set to the end of the 
+ *  \param endptr Pointer to char * that will be set to the end of the
  *      token. Set to NULL at end of string ONLY
  */
 static void strtok_ws(const char **s, const char **endptr)
 {
     const char *tok = *s;
+
     while (isspace(*tok)) {
         tok++;
     }
@@ -181,8 +194,9 @@ static void strtok_ws(const char **s, const char **endptr)
     }
 }
 
-/** Compares the range [s1, s2) to the C string at sptr, returning one if 
- *  and only if they are equivalent within the range. The string pointed to 
+
+/** Compares the range [s1, s2) to the C string at sptr, returning one if
+ *  and only if they are equivalent within the range. The string pointed to
  *  by sptr must contain a nul terminator by the end of the range */
 static bool strcmprng(const char *s1, const char *const s2, const char *sptr)
 {
@@ -197,7 +211,8 @@ static bool strcmprng(const char *s1, const char *const s2, const char *sptr)
     return s1 == s2 && *sptr == '\0';
 }
 
-/** Returns a pointer to the first non-whitespace character from the start 
+
+/** Returns a pointer to the first non-whitespace character from the start
  *  of the string */
 static char *strltrim(char *s)
 {
@@ -206,6 +221,7 @@ static char *strltrim(char *s)
     }
     return s;
 }
+
 
 /** Replaces the line break character with a nul terminator */
 static void strlnterm(char *s)
@@ -216,9 +232,12 @@ static void strlnterm(char *s)
     *s = '\0';
 }
 
+
 static bool mcc_data_classify_assignment(char *s, struct mcc_stmt *stmt)
 {
-    char *eq = strchr(s, '=');
+    char *eq;
+
+    eq = strchr(s, '=');
     if (eq) {
         stmt->u.keyval.key = s;
         *eq = '\0';
@@ -230,10 +249,12 @@ static bool mcc_data_classify_assignment(char *s, struct mcc_stmt *stmt)
     }
 }
 
+
 static bool mcc_data_classify_data(const char *s, struct mcc_stmt *stmt)
 {
     const char *s1 = s, *s2;
     char *endptr;
+
     strtok_ws(&s1, &s2);
     if (!s1) {
         return false;
@@ -251,10 +272,12 @@ static bool mcc_data_classify_data(const char *s, struct mcc_stmt *stmt)
     return s2 == endptr;
 }
 
+
 static bool mcc_data_classify_delim(const char *s, struct mcc_stmt *stmt)
 {
     const char *s1 = s, *s2;
     unsigned i;
+
     strtok_ws(&s1, &s2);
     if (s1) {
         for (i = 0; i < sizeof delims / sizeof *delims; i++) {
@@ -266,6 +289,7 @@ static bool mcc_data_classify_delim(const char *s, struct mcc_stmt *stmt)
     }
     return false;
 }
+
 
 static void mcc_data_classify_statement(char *s, struct mcc_stmt *stmt)
 {
@@ -280,38 +304,41 @@ static void mcc_data_classify_statement(char *s, struct mcc_stmt *stmt)
     }
 }
 
-/** Checks the current combination of scope and delimiter to determine if 
- *  it is valid. Also verifies that the cross calibration and scan 
- *  offaxis position are present if entering a data scope. If leaving a data 
+
+/** Checks the current combination of scope and delimiter to determine if
+ *  it is valid. Also verifies that the cross calibration and scan
+ *  offaxis position are present if entering a data scope. If leaving a data
  *  scope, clears the cal and pos flags.
- * 
+ *
  *  longjmp if: bad delimiter; missing calibration/offaxis position */
 static void mcc_data_scope_check(struct mcc_parse_context *ctx, MCCData **data,
                                  jmp_buf env)
 /** Valid combinations:
  *    - SCOPE_OUT_OF_FILE:             (0000 0000)   (0x00)
  *          FILEOPEN    ->  scope++     0000 0100     0x04  [++]
- * 
+ *
  *    - SCOPE_FILE                     (0001 0000)   (0x10)
  *          SCANOPEN    ->  scope++     0001 0000     0x10  [++]
  *          FILECLOSE   ->  scope--     0001 0101     0x15  [--]
- * 
+ *
  *    - SCOPE_SCAN                     (0010 0000)   (0x20)
  *          DATAOPEN    ->  scope++     0010 0001     0x21  [++] [pverify]
  *          SCANCLOSE   ->  scope--     0010 0010     0x22  [--]
- * 
+ *
  *    - SCOPE_DATA                     (0011 0000)   (0x30)
  *          DATACLOSE   ->  scope--     0011 0011    (0x33) [--] [pclear]
  */
 {
     const uint8_t combin = ((uint8_t)(ctx->scope) << 4) | (uint8_t)ctx->stmt.u.delim;
+    int err;
+
     switch (combin) {
     case 0x21:
         if (ctx->offaxis_fnd && ctx->crosscal_fnd) {
             /* Push a new scan onto the scanvector */
             mcc_data_push_scan(data, ctx->offaxis, env);
         } else {
-            int err = (ctx->offaxis_fnd)
+            err = (ctx->offaxis_fnd)
                 ? MCC_ERROR_MISSING_CROSSCAL
                 : MCC_ERROR_MISSING_OFFAXIS;
             longjmp(env, err);
@@ -334,10 +361,13 @@ static void mcc_data_scope_check(struct mcc_parse_context *ctx, MCCData **data,
     }
 }
 
+
 static double mcc_data_doubleconv(const char *nptr, jmp_buf env)
 {
     char *endptr;
-    double x = strtod(nptr, &endptr);
+    double x;
+
+    x = strtod(nptr, &endptr);
     if (nptr != endptr) {
         return x;
     } else {
@@ -345,12 +375,13 @@ static double mcc_data_doubleconv(const char *nptr, jmp_buf env)
     }
 }
 
+
 static void mcc_data_keyval_check(struct mcc_parse_context *ctx, jmp_buf env)
-/** Bluntly, we only care about two of these, and only in scan scope */
 {
     static const char *const offax_key = "SCAN_OFFAXIS_INPLANE";
     static const char *const crosscal_key = "CROSS_CALIBRATION";
     const char *const key = ctx->stmt.u.keyval.key;
+
     if (ctx->scope == SCOPE_SCAN) {
         if (!strcmp(key, offax_key)) {
             ctx->offaxis = mcc_data_doubleconv(ctx->stmt.u.keyval.val, env);
@@ -362,33 +393,15 @@ static void mcc_data_keyval_check(struct mcc_parse_context *ctx, jmp_buf env)
     }
 }
 
+
 static void mcc_data_data_check(const struct mcc_parse_context *ctx,
                                 struct mcc_scan **scan, jmp_buf env)
 {
-    /* The cross cal appears to be applied to the data already. I will 
-    continue to check that it is there */
-    /* const double dose = ctx->stmt.u.data.dose * ctx->crosscal; */
     const double dose = ctx->stmt.u.data.dose;
+
     mcc_scan_push_back(scan, ctx->stmt.u.data.pos, dose, env);
 }
 
-/** DELETEME: */
-/* static void PRINT_STATEMENT(const struct mcc_stmt *stmt)
-{
-    switch (stmt->type) {
-    case MCC_STMT_DELIM:
-        printf(" Delimiter: %s\n", delims[stmt->u.delim]);
-        break;
-    case MCC_STMT_KEYVAL:
-        printf(" Key-value: %s -> %s\n", stmt->u.keyval.key, stmt->u.keyval.val);
-        break;
-    case MCC_STMT_DATA:
-        printf(" Data:      % .2f\t%.3e\n", stmt->u.data.pos, stmt->u.data.dose);
-        break;
-    default:
-        puts(" Invalid statement");
-    }
-} */
 
 static void mcc_data_load_nodes(FILE *mcc, MCCData **data, jmp_buf env)
 {
@@ -398,9 +411,9 @@ static void mcc_data_load_nodes(FILE *mcc, MCCData **data, jmp_buf env)
         .crosscal_fnd = 0
     };
     char linebuf[LINEBUFSZ];
+
     while (fgets(linebuf, sizeof linebuf, mcc)) {
         mcc_data_classify_statement(strltrim(linebuf), &ctx.stmt);
-        //PRINT_STATEMENT(&ctx.stmt);
         switch (ctx.stmt.type) {
         case MCC_STMT_DELIM:
             mcc_data_scope_check(&ctx, data, env);
@@ -418,9 +431,12 @@ static void mcc_data_load_nodes(FILE *mcc, MCCData **data, jmp_buf env)
     }
 }
 
+
 static struct mcc_scan *mcc_scan_trim(struct mcc_scan *scan, jmp_buf env)
 {
-    void *newptr = realloc(scan, sizeof *scan + sizeof *scan->data * scan->sz);
+    void *newptr;
+
+    newptr = realloc(scan, sizeof *scan + sizeof *scan->data * scan->sz);
     if (newptr) {
         scan = newptr;
         scan->_cap = scan->sz;
@@ -430,10 +446,12 @@ static struct mcc_scan *mcc_scan_trim(struct mcc_scan *scan, jmp_buf env)
     return scan;
 }
 
+
 static MCCData *mcc_data_trim(MCCData *data, jmp_buf env)
 {
     void *newptr;
     unsigned i;
+
     for (i = 0; i < data->sz; i++) {
         data->scans[i] = mcc_scan_trim(data->scans[i], env);
     }
@@ -447,23 +465,25 @@ static MCCData *mcc_data_trim(MCCData *data, jmp_buf env)
     return data;
 }
 
-/** The below floating point subtractions/comparisons are safe in practice, 
- *  because they will always differ by ~5mm--nowhere near machine epsilon */
 
 static int mcc_data_scancmp(const struct mcc_scan **s1, const struct mcc_scan **s2)
 {
     const double y1 = (*s1)->y, y2 = (*s2)->y;
+
     return (y1 > y2) - (y1 < y2);
 }
+
 
 static int mcc_data_datacmp(const double *x1, const double *x2)
 {
     return (*x1 > *x2) - (*x1 < *x2);
 }
 
+
 static void mcc_data_sort(MCCData *data)
 {
     unsigned i;
+
     qsort(data->scans, data->sz, sizeof *data->scans,
           (__compar_fn_t)mcc_data_scancmp);
     for (i = 0; i < data->sz; i++) {
@@ -472,15 +492,18 @@ static void mcc_data_sort(MCCData *data)
     }
 }
 
+
 static double maxf(double x, double y)
 {
     return (x > y) ? x : y;
 }
 
+
 static double mcc_data_threshold(MCCData *data)
 {
     double max = 0.0;
     unsigned i, j;
+
     for (j = 0; j < data->sz; j++) {
         for (i = 0; i < data->scans[j]->sz; i++) {
             max = maxf(max, data->scans[j]->data[i].dose);
@@ -489,10 +512,13 @@ static double mcc_data_threshold(MCCData *data)
     return 0.1 * max;
 }
 
+
 static void mcc_data_integrate(MCCData *data)
 {
-    const double threshold = mcc_data_threshold(data);
+    double threshold;
     unsigned i, j;
+
+    threshold = mcc_data_threshold(data);
     data->sum = 0.0;
     data->nsupp = 0;
     for (j = 0; j < data->sz; j++) {
@@ -504,10 +530,13 @@ static void mcc_data_integrate(MCCData *data)
     }
 }
 
+
 static MCCData *mcc_data_alloc(FILE *mcc, int *stat)
 {
-    MCCData *volatile data = calloc(1UL, sizeof *data + sizeof *data->scans * INIT_SCANCAP);
+    MCCData *volatile data;
     jmp_buf env;
+
+    data = calloc(1UL, sizeof *data + sizeof *data->scans * INIT_SCANCAP);
     if (!data) {
         *stat = MCC_ERROR_NOMEM;
         return NULL;
@@ -524,27 +553,15 @@ static MCCData *mcc_data_alloc(FILE *mcc, int *stat)
     return data;
 }
 
-/* static void MCC_TESTPRINT(const MCCData *data)
-{
-    unsigned i;
-    for (i = 0; i < data->sz; i++) {
-        unsigned j;
-        printf("Scan at % .1f\n", data->scans[i]->y);
-        for (j = 0; j < data->scans[i]->sz; j++) {
-            printf("  (% .1f, %.2f Gy)\n", data->scans[i]->data[j].x, data->scans[i]->data[j].dose);
-        }
-    }
-} */
 
 MCCData *mcc_data_create(const char *filename, int *stat)
 {
     MCCData *data = NULL;
-    FILE *mfile = fopen(filename, "r");
+    FILE *mfile;
+
+    mfile = fopen(filename, "r");
     if (mfile) {
         data = mcc_data_alloc(mfile, stat);
-        /* if (data) {
-            MCC_TESTPRINT(data);
-        } */
     } else {
         *stat = MCC_ERROR_FOPEN_FAILED;
     }
@@ -552,9 +569,11 @@ MCCData *mcc_data_create(const char *filename, int *stat)
     return data;
 }
 
+
 void mcc_data_destroy(MCCData *data)
 {
     unsigned i;
+
     if (data) {
         for (i = 0; i < data->sz; i++) {
             free(data->scans[i]);
@@ -563,14 +582,17 @@ void mcc_data_destroy(MCCData *data)
     }
 }
 
-/** Returns the index of the scan with the LARGEST ordinate NOT GREATER 
+
+/** Returns the index of the scan with the LARGEST ordinate NOT GREATER
  *  than y */
 static int mcc_data_scan_bsearch(const MCCData *data, const double y)
 {
-    int l = 0, r = data->sz;
+    int l = 0, r = data->sz, med;
+    double y0;
+
     while (l < r) {
-        const int med = (r + l) / 2;
-        const double y0 = data->scans[med]->y;
+        med = (r + l) / 2;
+        y0 = data->scans[med]->y;
         if (y < y0) {
             r = med;
         } else if (y0 < y) {
@@ -582,12 +604,15 @@ static int mcc_data_scan_bsearch(const MCCData *data, const double y)
     return l - 1;
 }
 
+
 static int mcc_data_data_bsearch(const struct mcc_scan *scan, const double x)
 {
-    int l = 0, r = scan->sz;
+    int l = 0, r = scan->sz, med;
+    double x0;
+
     while (l < r) {
-        const int med = (r + l) / 2;
-        const double x0 = scan->data[med].x;
+        med = (r + l) / 2;
+        x0 = scan->data[med].x;
         if (x < x0) {
             r = med;
         } else if (x0 < x) {
@@ -600,27 +625,26 @@ static int mcc_data_data_bsearch(const struct mcc_scan *scan, const double x)
 }
 
 
-/** TODO: If the x value is outside the bounds of either scan, it returns 
- *  this signal value. Currently, I am returning zero if this happens at 
- *  all, but the scans have staggered widths and this creates rectangular 
- *  regions at the edges of the detector where my algorithm will always
- *  return 0.0, despite dose technically existing there
- */
 #define SIG_NONCOMPACT -1.0
 
 static double mcc_data_interp_scan(const struct mcc_scan *scan, double x)
 {
-    const int l = mcc_data_data_bsearch(scan, x);
-    const unsigned r = l + 1;
+    double d0, m, X;
+    unsigned r;
+    int l;
+
+    l = mcc_data_data_bsearch(scan, x);
+    r = l + 1;
     if (l >= 0 && r < scan->sz) {
-        const double d0 = scan->data[l].dose;
-        const double m = scan->data[r].dose - d0;
-        const double X = (x - scan->data[l].x) / (scan->data[r].x - scan->data[l].x);
+        d0 = scan->data[l].dose;
+        m = scan->data[r].dose - d0;
+        X = (x - scan->data[l].x) / (scan->data[r].x - scan->data[l].x);
         return fma(m, X, d0);
     } else {
         return SIG_NONCOMPACT;
     }
 }
+
 
 static double mcc_data_interp_scans(const struct mcc_scan *scan1,
                                     const struct mcc_scan *scan2,
@@ -630,30 +654,27 @@ static double mcc_data_interp_scans(const struct mcc_scan *scan1,
         mcc_data_interp_scan(scan1, x),
         mcc_data_interp_scan(scan2, x)
     };
+    double m, Y;
+
     if (interp[0] != SIG_NONCOMPACT && interp[1] != SIG_NONCOMPACT) {
-        const double m = interp[1] - interp[0];
-        const double Y = (y - scan1->y) / (scan2->y - scan1->y);
+        m = interp[1] - interp[0];
+        Y = (y - scan1->y) / (scan2->y - scan1->y);
         return fma(m, Y, interp[0]);
     } else {
         return 0.0;
     }
 }
 
+
 double mcc_data_get_point_dose(const MCCData *data, double x, double y)
-/** STRATAGEM:
- *      BILINEAR BABY
- *      Find the scans bounding above and below
- *      Interpolate the value at x for both
- *      Then interpolate the value at y
- *      
- *      Do bounds checking like your gamma implementation, assume compact 
- *      support in both dimensions
- */
 {
-    const int l = mcc_data_scan_bsearch(data, y);
-    const unsigned r = l + 1;
+    unsigned r;
+    int l;
+
+    l = mcc_data_scan_bsearch(data, y);
+    r = l + 1;
     if (l >= 0 && r < data->sz) {
-        return mcc_data_interp_scans(data->scans[l], data->scans[r], x, y);        
+        return mcc_data_interp_scans(data->scans[l], data->scans[r], x, y);
     } else {
         return 0.0;
     }
